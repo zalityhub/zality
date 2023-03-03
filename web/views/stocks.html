@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="utf-8">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="public/css/styles.css">
+
+    <title>Stocks</title>
+</head>
+
+<body class="fade_in" onload="onLoad()">
+
+<script>
+  function setMenuList() {
+    let menuList = '&nbsp;&nbsp;&nbsp;&nbsp;<a href="/index.html" class="menu_btn">HOME</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/about.html" class="menu_btn">ABOUT</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/portfolio.html" class="menu_btn">PORTFOLIO</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/contact.html" class="menu_btn">CONTACT</a>';
+    if ('{{express}}' === 'yes')
+      menuList = menuList + '&nbsp;&nbsp;&nbsp;&nbsp;<a href="/lookup.html" class="menu_btn">DIVERCTI</a>';
+    const menus = document.getElementsByClassName('menu_list');
+    if (menus.length > 0)
+      menus[0].innerHTML = menuList;
+  }
+  function onLoad() {
+    setMenuList();
+    loadPage(Quotes);
+  }
+</script>
+
+<div class="social_links">
+    <span><a href="https://www.twitter.com/zalityllc"><i class="fab fa-twitter"></i></a></span>
+    <span><a href="https://www.facebook.com/zalityllc"><i class="fab fa-facebook-f"></i></a></span>
+    <span><a href="https://www.youtube.com/channel/UCcY9hw5COssAmHzPbD976EQ"><i class="fab fa-youtube"></i></a></span>
+    <span><a href="https://www.instagram.com/zalityllc"><i class="fab fa-instagram"></i></a></span>
+</div>
+
+<div>
+    <a href="/index.html">
+        <img class="logoi" src="public/images/logo2.png" alt="">
+        <span class="logo1">Zality</span><span class="logo2">.com</span>
+    </a>
+</div>
+<br>
+
+<div class="menu_list">
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/index.html" class="menu_btn">HOME</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/about.html" class="menu_btn">ABOUT</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/portfolio.html" class="menu_btn">PORTFOLIO</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/contact.html" class="menu_btn">CONTACT</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/lookup.html" class="menu_btn">DIVERCTI</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/stocks.html" class="menu_btn">STOCKS</a>
+</div>
+
+<div id="page_body" class="body_white_arial16_100">
+</div>
+
+<script>
+  function stringify(obj, replacer, spaces, cycleReplacer) {
+    return JSON.stringify(obj, serializer(replacer, cycleReplacer), spaces)
+  }
+
+  function serializer(replacer, cycleReplacer) {
+    const stack = [], keys = []
+
+    if (cycleReplacer == null) cycleReplacer = function (key, value) {
+      if (stack[0] === value) return "[Circular ~]"
+      return "[Circular ~." + keys.slice(0, stack.indexOf(value)).join(".") + "]"
+    }
+
+    return function (key, value) {
+      if (stack.length > 0) {
+        const thisPos = stack.indexOf(this)
+        ~thisPos ? stack.splice(thisPos + 1) : stack.push(this)
+        ~thisPos ? keys.splice(thisPos, Infinity, key) : keys.push(key)
+        if (~stack.indexOf(value)) value = cycleReplacer.call(this, key, value)
+      } else stack.push(value)
+
+      return replacer == null ? value : replacer.call(this, key, value)
+    }
+  }
+</script>
+
+<script>
+  function StringBuilder() {
+    this._array = [];
+    this._index = 0;
+  }
+
+  StringBuilder.prototype.append = function (str) {
+    this._array[this._index] = str;
+    this._index++;
+  }
+
+  StringBuilder.prototype.sort = function () {
+    this._array.sort();
+  }
+
+  StringBuilder.prototype.toString = function () {
+    return this._array.join('');
+  }
+
+  StringBuilder.prototype.insert = function (index, ...items) {
+    this._array.splice(index, 0, ...items);
+  }
+</script>
+
+<script>
+  function fetch(text, cb) {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', '/log', true);
+
+    //Send the proper header information along with the request
+    xhr.setRequestHeader('Content-Type', 'text/plain');
+    xhr.setRequestHeader('Access-Control-Allow-Origin', 'https://query1.finance.yahoo.com/*')
+
+    xhr.onreadystatechange = () => { // Call a function when the state changes.
+      if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+      }
+    }
+    xhr.send(text.toString());
+  }
+</script>
+
+<script>
+  function getQuote(symbol, cb) {
+    const url = `http://localhost:8080/v10/finance/quoteSummary/${symbol}?modules=earningsHistory`;
+
+    function reqListener() {
+      console.log(this.responseText);
+    }
+
+    const req = new XMLHttpRequest();
+    req.addEventListener('load', reqListener);
+    req.open('GET', url);
+    req.setRequestHeader('Access-Control-Allow-Origin', 'https://query1.finance.yahoo.com/*');
+    req.send();
+  }
+</script>
+
+<script>
+  function refreshQuoteClick(symbol) {
+    for (let i = 0, ilen = Quotes.length; i < ilen; ++i) {
+      const quote = Quotes[i];
+      if (quote.symbol === symbol) {
+        getQuote(symbol, function (err, results) {
+          if (err)
+            return console.log(err.toString());
+          console.log(stringify(results));
+          // loadPage(Quotes);
+        });
+      }
+    }
+  }
+
+  function buildSection(symbol, desc, section) {
+    const sb = new StringBuilder();
+
+    sb.append(`<button type="button" class="menu_btn" data-toggle="collapse" data-target="#${symbol}_${desc}"><i>${desc}</i></button><div id="${symbol}_${desc}" class="collapse">`);
+    sb.append(`<table style="border: groove;"><tr style="outline: thin solid"><td><b>${desc}</b></td></tr>`);
+    sb.append(`<tr><td><table>`);
+
+    const sb2 = new StringBuilder();
+    for (const it in section)
+      sb2.append(`<tr><td>${it}</td><td>${section[it]}</td></tr>`);
+    sb2.sort();
+    sb.append(sb2.toString());
+    sb.append('</table></td></tr></table></div>');
+    return sb.toString();
+  }
+
+  function buildQuote(quote) {
+    const sb = new StringBuilder();
+    const symbol = quote.symbol;
+    const results = quote.results;
+
+    sb.append(`<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#${symbol}">${symbol}</button><div id="${symbol}" class="collapse">`);
+    sb.append(`<i>${symbol}:&nbsp;&nbsp;</i>`);
+    sb.append(`<button type="button" onclick="refreshQuoteClick('${symbol}')" class="menu_btn"><i>Refresh</i></button>`);
+
+    for (const section in results) {
+      let desc = section;
+      if (section === 'summaryDetail')
+        desc = 'Summary';
+      else if (section === 'price')
+        desc = 'Detail';
+      sb.append(buildSection(symbol, desc, results[section]));
+    }
+    sb.append('</div>');
+    return sb.toString();
+  }
+
+  function loadPage(quotes) {
+    const sb = new StringBuilder();
+    sb.append(`<div class="container">`);
+
+    for (let i = 0, ilen = quotes.length; i < ilen; ++i)
+      sb.append(`${buildQuote(quotes[i])}<br>`);
+
+    sb.append('</div>');
+    const page = document.getElementById('page_body');
+    if (page) {
+      page.innerHTML = sb.toString();
+      // console.log(page.innerHTML);
+    }
+  }
+</script>
+
+<script>
+  const Quotes = [
+    {
+      "symbol": "AAPL", "results": {
+        "summaryDetail": {
+          "maxAge": 1,
+          "priceHint": 2,
+          "previousClose": 146.71,
+          "open": 147.71,
+          "dayLow": 147.45,
+          "dayHigh": 149.17,
+          "regularMarketPreviousClose": 146.71,
+          "regularMarketOpen": 147.71,
+          "regularMarketDayLow": 147.45,
+          "regularMarketDayHigh": 149.17,
+          "dividendRate": 0.92,
+          "dividendYield": 0.0063,
+          "exDividendDate": "2023-02-10T00:00:00.000Z",
+          "payoutRatio": 0.1545,
+          "fiveYearAvgDividendYield": 0.96,
+          "beta": 1.277894,
+          "trailingPE": 25.156462,
+          "forwardPE": 22.480244,
+          "volume": 44998470,
+          "regularMarketVolume": 44998470,
+          "averageVolume": 75425848,
+          "averageVolume10days": 58793970,
+          "averageDailyVolume10Day": 58793970,
+          "bid": 148.01,
+          "ask": 148,
+          "bidSize": 900,
+          "askSize": 1000,
+          "marketCap": 2340375494656,
+          "fiftyTwoWeekLow": 124.17,
+          "fiftyTwoWeekHigh": 179.61,
+          "priceToSalesTrailing12Months": 6.039102,
+          "fiftyDayAverage": 140.5632,
+          "twoHundredDayAverage": 147.2006,
+          "trailingAnnualDividendRate": 0.91,
+          "trailingAnnualDividendYield": 0.0062027127,
+          "currency": "USD",
+          "fromCurrency": null,
+          "toCurrency": null,
+          "lastMarket": null,
+          "coinMarketCapLink": null,
+          "algorithm": null,
+          "tradeable": false
+        },
+        "price": {
+          "maxAge": 1,
+          "preMarketChangePercent": 0.00681617,
+          "preMarketChange": 1,
+          "preMarketTime": "2023-02-27T14:29:58.000Z",
+          "preMarketPrice": 147.71,
+          "preMarketSource": "FREE_REALTIME",
+          "postMarketChangePercent": 0.0007436494,
+          "postMarketChange": 0.11000061,
+          "postMarketTime": "2023-02-28T00:59:58.000Z",
+          "postMarketPrice": 148.03,
+          "postMarketSource": "DELAYED",
+          "regularMarketChangePercent": 0.008247505,
+          "regularMarketChange": 1.2099915,
+          "regularMarketTime": "2023-02-27T21:00:03.000Z",
+          "priceHint": 2,
+          "regularMarketPrice": 147.92,
+          "regularMarketDayHigh": 149.17,
+          "regularMarketDayLow": 147.45,
+          "regularMarketVolume": 44998470,
+          "averageDailyVolume10Day": 58793970,
+          "averageDailyVolume3Month": 75425848,
+          "regularMarketPreviousClose": 146.71,
+          "regularMarketSource": "FREE_REALTIME",
+          "regularMarketOpen": 147.71,
+          "exchange": "NMS",
+          "exchangeName": "NasdaqGS",
+          "exchangeDataDelayedBy": 0,
+          "marketState": "POSTPOST",
+          "quoteType": "EQUITY",
+          "symbol": "AAPL",
+          "underlyingSymbol": null,
+          "shortName": "Apple Inc.",
+          "longName": "Apple Inc.",
+          "currency": "USD",
+          "quoteSourceName": "Delayed Quote",
+          "currencySymbol": "$",
+          "fromCurrency": null,
+          "toCurrency": null,
+          "lastMarket": null,
+          "marketCap": 2340375494656
+        }
+      }
+    }
+    ,
+    {
+      "symbol": "MSFT", "results": {
+        "summaryDetail": {
+          "maxAge": 1,
+          "priceHint": 2,
+          "previousClose": 146.71,
+          "open": 147.71,
+          "dayLow": 147.45,
+          "dayHigh": 149.17,
+          "regularMarketPreviousClose": 146.71,
+          "regularMarketOpen": 147.71,
+          "regularMarketDayLow": 147.45,
+          "regularMarketDayHigh": 149.17,
+          "dividendRate": 0.92,
+          "dividendYield": 0.0063,
+          "exDividendDate": "2023-02-10T00:00:00.000Z",
+          "payoutRatio": 0.1545,
+          "fiveYearAvgDividendYield": 0.96,
+          "beta": 1.277894,
+          "trailingPE": 25.156462,
+          "forwardPE": 22.480244,
+          "volume": 44998470,
+          "regularMarketVolume": 44998470,
+          "averageVolume": 75425848,
+          "averageVolume10days": 58793970,
+          "averageDailyVolume10Day": 58793970,
+          "bid": 148.01,
+          "ask": 148,
+          "bidSize": 900,
+          "askSize": 1000,
+          "marketCap": 2340375494656,
+          "fiftyTwoWeekLow": 124.17,
+          "fiftyTwoWeekHigh": 179.61,
+          "priceToSalesTrailing12Months": 6.039102,
+          "fiftyDayAverage": 140.5632,
+          "twoHundredDayAverage": 147.2006,
+          "trailingAnnualDividendRate": 0.91,
+          "trailingAnnualDividendYield": 0.0062027127,
+          "currency": "USD",
+          "fromCurrency": null,
+          "toCurrency": null,
+          "lastMarket": null,
+          "coinMarketCapLink": null,
+          "algorithm": null,
+          "tradeable": false
+        },
+        "price": {
+          "maxAge": 1,
+          "preMarketChangePercent": 0.00681617,
+          "preMarketChange": 1,
+          "preMarketTime": "2023-02-27T14:29:58.000Z",
+          "preMarketPrice": 147.71,
+          "preMarketSource": "FREE_REALTIME",
+          "postMarketChangePercent": 0.0007436494,
+          "postMarketChange": 0.11000061,
+          "postMarketTime": "2023-02-28T00:59:58.000Z",
+          "postMarketPrice": 148.03,
+          "postMarketSource": "DELAYED",
+          "regularMarketChangePercent": 0.008247505,
+          "regularMarketChange": 1.2099915,
+          "regularMarketTime": "2023-02-27T21:00:03.000Z",
+          "priceHint": 2,
+          "regularMarketPrice": 147.92,
+          "regularMarketDayHigh": 149.17,
+          "regularMarketDayLow": 147.45,
+          "regularMarketVolume": 44998470,
+          "averageDailyVolume10Day": 58793970,
+          "averageDailyVolume3Month": 75425848,
+          "regularMarketPreviousClose": 146.71,
+          "regularMarketSource": "FREE_REALTIME",
+          "regularMarketOpen": 147.71,
+          "exchange": "NMS",
+          "exchangeName": "NasdaqGS",
+          "exchangeDataDelayedBy": 0,
+          "marketState": "POSTPOST",
+          "quoteType": "EQUITY",
+          "symbol": "MSFT",
+          "underlyingSymbol": null,
+          "shortName": "Apple Inc.",
+          "longName": "Apple Inc.",
+          "currency": "USD",
+          "quoteSourceName": "Delayed Quote",
+          "currencySymbol": "$",
+          "fromCurrency": null,
+          "toCurrency": null,
+          "lastMarket": null,
+          "marketCap": 2340375494656
+        }
+      }
+    }
+  ];
+</script>
+
+</body>
+</html>

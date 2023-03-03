@@ -1,0 +1,4 @@
+cd $(dirname $0)
+echo ''
+node ask.js $*
+echo ''

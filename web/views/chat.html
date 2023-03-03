@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <link rel="stylesheet" href="public/css/styles.css">
+
+    <title>Chat</title>
+</head>
+
+<body class="fade_in" onload="onLoad()" onkeyup="keyPress(event)">
+
+<script>
+  function stringify(obj, replacer, spaces, cycleReplacer) {
+    return JSON.stringify(obj, serializer(replacer, cycleReplacer), spaces)
+  }
+
+  function serializer(replacer, cycleReplacer) {
+    const stack = [], keys = []
+
+    if (cycleReplacer == null) cycleReplacer = function (key, value) {
+      if (stack[0] === value) return "[Circular ~]"
+      return "[Circular ~." + keys.slice(0, stack.indexOf(value)).join(".") + "]"
+    }
+
+    return function (key, value) {
+      if (stack.length > 0) {
+        const thisPos = stack.indexOf(this)
+        ~thisPos ? stack.splice(thisPos + 1) : stack.push(this)
+        ~thisPos ? keys.splice(thisPos, Infinity, key) : keys.push(key)
+        if (~stack.indexOf(value)) value = cycleReplacer.call(this, key, value)
+      } else stack.push(value)
+
+      return replacer == null ? value : replacer.call(this, key, value)
+    }
+  }
+</script>
+
+<script>
+  function setMenuList() {
+    let menuList = '&nbsp;&nbsp;&nbsp;&nbsp;<a href="/index.html" class="menu_btn">HOME</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/about.html" class="menu_btn">ABOUT</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/portfolio.html" class="menu_btn">PORTFOLIO</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/contact.html" class="menu_btn">CONTACT</a>';
+    if ('{{express}}' === 'yes')
+      menuList = menuList + '&nbsp;&nbsp;&nbsp;&nbsp;<a href="/lookup.html" class="menu_btn">DIVERCTI</a>';
+    const menus = document.getElementsByClassName('menu_list');
+    if (menus.length > 0)
+      menus[0].innerHTML = menuList;
+  }
+</script>
+
+<script>
+  setMenuList();
+
+  const OPENAI_API_KEY = '';
+  let bTextToSpeechSupported = false;
+  let bSpeechInProgress = false;
+  let oSpeechRecognizer = null
+  let oSpeechSynthesisUtterance = null;
+  let oVoices = null;
+
+  function onLoad() {
+    if ('webkitSpeechRecognition' in window) {
+    } else {
+      //speech to text not supported
+      lblSpeak.style.display = 'none';
+    }
+
+    if ('speechSynthesis' in window) {
+      bTextToSpeechSupported = true;
+
+      speechSynthesis.onvoiceschanged = function () {
+        oVoices = window.speechSynthesis.getVoices();
+        for (let i = 0; i < oVoices.length; i++) {
+          selVoices[selVoices.length] = new Option(oVoices[i].name, i);
+          if(oVoices[i].name.toLowerCase().indexOf('english') >= 0 ) {
+            console.log(`choosing ${oVoices[i].name}`);
+            selVoices.selectedIndex = i;
+          }
+        }
+      }
+    }
+
+    //console.log(selVoices);
+    console.log('done');
+  }
+
+  function ChangeLang(o) {
+    if (oSpeechRecognizer) {
+      oSpeechRecognizer.lang = selLang.value;
+      //SpeechToText()
+    }
+  }
+
+  function Send() {
+    const sQuestion = txtMsg.value;
+    if (sQuestion === '') {
+      alert('Enter a question');
+      txtMsg.focus();
+      return;
+    }
+
+    const oHttp = new XMLHttpRequest();
+    oHttp.open('POST', 'https://api.openai.com/v1/completions');
+    oHttp.setRequestHeader('Accept', 'application/json');
+    oHttp.setRequestHeader('Content-Type', 'application/json');
+    oHttp.setRequestHeader('Authorization', 'Bearer ' + OPENAI_API_KEY)
+
+    oHttp.onreadystatechange = function () {
+      if (oHttp.readyState === 4) {
+        //console.log(oHttp.status);
+        let oJson = {}
+        if (txtOutput.value !== '')
+          txtOutput.value += '\n';
+
+        try {
+          oJson = JSON.parse(oHttp.responseText);
+        } catch (ex) {
+          txtOutput.value += 'Error: ' + ex.message
+        }
+
+        if (oJson.error && oJson.error.message) {
+          txtOutput.value += 'Error: ' + oJson.error.message;
+        } else if (oJson.choices && oJson.choices[0].text) {
+          let text = oJson.choices[0].text;
+
+          if (selLang.value !== 'en-US') {
+            const a = text.split('?\n');
+            if (a.length === 2)
+              text = a[1];
+          }
+
+          if (text === '')
+            text = 'No response';
+          txtOutput.value += 'Chat GPT: ' + text;
+          TextToSpeech(text);
+        }
+      }
+    }
+
+    const sModel = selModel.value;    // 'text-davinci-003';
+    const iMaxTokens = 2048;
+    const sUserId = '1';
+    const dTemperature = 0.5;
+
+    const data = {
+      model: sModel,
+      prompt: sQuestion,
+      max_tokens: iMaxTokens,
+      user: sUserId,
+      temperature: dTemperature,
+      frequency_penalty: 0.0, //Number between -2.0 and 2.0  Positive value decrease the model's likelihood to repeat the same line verbatim.
+      presence_penalty: 0.0,  //Number between -2.0 and 2.0. Positive values increase the model's likelihood to talk about new topics.
+      stop: ['#', ';'] //Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
+    }
+
+    oHttp.send(JSON.stringify(data));
+
+    if (txtOutput.value !== '')
+      txtOutput.value += '\n';
+    txtOutput.value += 'Me: ' + sQuestion;
+    txtMsg.value = '';
+  }
+
+  function TextToSpeech(s) {
+    if (bTextToSpeechSupported === false)
+      return;
+    if (chkMute.checked)
+      return;
+
+    oSpeechSynthesisUtterance = new SpeechSynthesisUtterance();
+
+    if (oVoices) {
+      const sVoice = selVoices.value;
+      if (sVoice !== '') {
+        oSpeechSynthesisUtterance.voice = oVoices[parseInt(sVoice)];
+      }
+    }
+
+    oSpeechSynthesisUtterance.onend = function () {
+      //finished talking - can now listen
+      if (oSpeechRecognizer && chkSpeak.checked) {
+        oSpeechRecognizer.start();
+      }
+    }
+
+    if (oSpeechRecognizer && chkSpeak.checked) {
+      //do not listen to yourself when talking
+      oSpeechRecognizer.stop();
+    }
+
+    oSpeechSynthesisUtterance.lang = selLang.value;
+    oSpeechSynthesisUtterance.text = s;
+    //Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed
+    window.speechSynthesis.speak(oSpeechSynthesisUtterance);
+  }
+
+  function Mute(b) {
+    if (b) {
+      selVoices.style.display = 'none';
+    } else {
+      selVoices.style.display = '';
+    }
+  }
+
+  function SpeechToText() {
+    if (oSpeechRecognizer) {
+      if (chkSpeak.checked) {
+        oSpeechRecognizer.start();
+      } else {
+        oSpeechRecognizer.stop();
+      }
+      return;
+    }
+
+    oSpeechRecognizer = new webkitSpeechRecognition();
+    oSpeechRecognizer.continuous = true;
+    oSpeechRecognizer.interimResults = true;
+    oSpeechRecognizer.lang = selLang.value;
+    oSpeechRecognizer.start();
+
+    oSpeechRecognizer.onresult = function (event) {
+      let interimTranscripts = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+
+        if (event.results[i].isFinal) {
+          txtMsg.value = transcript;
+          Send();
+        } else {
+          transcript.replace('\n', '<br>');
+          interimTranscripts += transcript;
+        }
+
+        const oDiv = document.getElementById('idText');
+        oDiv.innerHTML = '<span style="color: #999;">' + interimTranscripts + '</span>';
+      }
+    }
+
+    oSpeechRecognizer.onerror = function (event) {
+      console.error(stringify(event))
+    }
+  }
+
+  function xkeyPress(event) {
+    if (event.keyCode === 13)
+      return $("#btnSend").click();
+    $("#txtMsg").keyup(event);
+  }
+</script>
+
+<div class="social_links">
+    <span><a href="https://www.twitter.com/zalityllc"><i class="fab fa-twitter"></i></a></span>
+    <span><a href="https://www.facebook.com/zalityllc"><i class="fab fa-facebook-f"></i></a></span>
+    <span><a href="https://www.youtube.com/channel/UCcY9hw5COssAmHzPbD976EQ"><i class="fab fa-youtube"></i></a></span>
+    <span><a href="https://www.instagram.com/zalityllc"><i class="fab fa-instagram"></i></a></span>
+</div>
+
+<div>
+    <a href="/index.html">
+        <img class="logoi" src="public/images/logo2.png" alt="">
+        <span class="logo1">Zality</span><span class="logo2">.com</span>
+    </a>
+</div>
+<br>
+
+<div class="menu_list">
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/index.html" class="menu_btn">HOME</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/about.html" class="menu_btn">ABOUT</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/portfolio.html" class="menu_btn">PORTFOLIO</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/contact.html" class="menu_btn">CONTACT</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/lookup.html" class="menu_btn">DIVERCTI</a>
+</div>
+
+<div class="body_white_arial16_100">
+    <div id="idContainer">
+        <textarea id="txtOutput" rows="20" style="margin-top: 10px; width: 100%;" placeholder="Output"></textarea>
+
+        <div>
+            <button type="button" onclick="Send()" id="btnSend">Send</button>
+            <label id="lblSpeak"><input id="chkSpeak" type="checkbox" onclick="SpeechToText()"/>Listen</label>
+            <label id="lblMute"><input id="chkMute" type="checkbox" onclick="Mute(this.checked)"/>Mute</label>
+
+            <select id="selModel">
+                <option value="text-davinci-003">text-davinci-003</option>
+                <option value="text-davinci-002">text-davinci-002</option>
+                <option value="code-davinci-002">code-davinci-002</option>
+            </select>
+
+            <select id="selLang" onchange="ChangeLang(this)">
+                <option value="en-US">English (United States)</option>
+                <option value="fr-FR">French (France)</option>
+                <option value="ru-RU">Russian (Russia)</option>
+                <option value="pt-BR">Portuguese (Brazil)</option>
+                <option value="es-ES">Spanish (Spain)</option>
+                <option value="de-DE">German (Germany)</option>
+                <option value="it-IT">Italian (Italy)</option>
+                <option value="pl-PL">Polish (Poland)</option>
+                <option value="nl-NL">Dutch (Netherlands)</option>
+            </select>
+
+            <select id="selVoices"></select>
+        </div>
+
+        <textarea id="txtMsg" rows="5" wrap="soft" style="width: 98%; margin-left: 3px; margin-top: 6px"
+                  placeholder="Input Text"></textarea>
+
+        <div id="idText"></div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "@zality/nodejs",
+  "version": "1.9.6",
+  "description": "Simple to use",
+  "keywords": [
+    "simple"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zalityhub/zality.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "main": "index.js",
+  "files": [
+    "README.md",
+    "fsm/index.js",
+    "fsm/fsm.js",
+    "util/index.js",
+    "util/util.js",
+    "test/fsm.js"
+  ],
+  "scripts": {
+    "test": "",
+    "integration": "",
+    "lint": ""
+  }
+}

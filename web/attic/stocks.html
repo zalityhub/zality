@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Stocks</title>
+
+    <style>
+        .arrow {
+            border: solid black;
+            border-width: 0 3px 3px 0;
+            display: inline-block;
+            padding: 3px;
+        }
+
+        .right {
+            transform: rotate(-45deg);
+            -webkit-transform: rotate(-45deg);
+        }
+
+        .left {
+            transform: rotate(135deg);
+            -webkit-transform: rotate(135deg);
+        }
+
+        .up {
+            transform: rotate(-135deg);
+            -webkit-transform: rotate(-135deg);
+        }
+
+        .down {
+            transform: rotate(45deg);
+            -webkit-transform: rotate(45deg);
+        }
+
+        .show-table {
+            border-style: none;
+        }
+
+        .hide-table {
+            display: none;
+        }
+    </style>
+
+    <script>
+      function hostLog(text, cb) {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", 'http://localhost:3000/logger', true);
+
+        //Send the proper header information along with the request
+        xhr.setRequestHeader('Content-Type', 'text/plain');
+
+        xhr.onreadystatechange = () => { // Call a function when the state changes.
+          if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+          }
+        }
+        xhr.send(text.toString());
+      }
+
+      function log(text, cb) {
+        if (text)
+          console.log(text);
+      }
+
+      function logObj(text, obj) {
+        const string = JSON.stringify(obj, null, 4);
+        const typ = typeof obj;
+        log(`${text}:${typ}: ${string}`);
+      }
+    </script>
+
+    <script>
+      const savedObject = {};
+
+      function uuidv4() {
+        return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+          (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        ).toString();
+      }
+
+      function leftArrow(stag, text, etag) {
+        return `${stag}<p style="cursor: pointer;"><i class="arrow left"></i>&nbsp;</nb>${text}</p>${etag}`;
+      }
+
+      function rightArrow(stag, text, etag) {
+        return `${stag}<p style="cursor: pointer;"><i class="arrow right"></i>&nbsp;</nb>${text}</p>${etag}`;
+      }
+
+      function downArrow(stag, text, etag) {
+        return `${stag}<p style="cursor: pointer;"><i class="arrow down"></i>&nbsp;</nb>${text}</p>${etag}`;
+      }
+
+      function upArrow(stag, text, etag) {
+        return `${stag}<p style="cursor: pointer;"><i class="arrow up"></i>&nbsp;</nb>${text}</p>${etag}`;
+      }
+
+      function elementClick(event) {
+        let target = event.currentTarget;
+        if (savedObject[target.uuid])
+          expandElement(target);
+        else
+          collapseElement(target, 3);
+      }
+
+      function collapseElement(element, level) {
+        if (!element)
+          return;
+        const tr = getEntity(element, HTMLTableRowElement);
+        if (!tr)
+          return;
+        const td = getEntity(tr, HTMLTableCellElement);
+        if (!td)
+          return;
+        const lines = td.outerText.split('\n');    // lines
+        if (lines.length <= 0)
+          return;
+        const abbv = `${lines[0]}...`;
+        const uuid = uuidv4();
+        const saved = {innerHTML: element.innerHTML, abbv: abbv, uuid: uuid, level: level};
+        savedObject[uuid] = saved;
+        const arrow = rightArrow(`<h${level}>`, abbv, `</h${level}>`);
+        const newed = `<tr><td>${arrow}</td></tr></table>`;
+        element.innerHTML = newed;
+        element.uuid = uuid;
+        element.addEventListener('click', elementClick);
+      }
+
+      function expandElement(element) {
+        const saved = savedObject[element.uuid].innerHTML;
+        element.innerHTML = saved;
+        savedObject[element.uuid] = null;
+        element.addEventListener('click', elementClick);
+      }
+
+      function getEntity(element, e) {
+        if (!element)
+          return null;
+        for (let en = 0, ilen = element.childNodes.length; en < ilen; ++en) {
+          const c = element.childNodes[en];
+          if (c instanceof e)
+            return c;
+        }
+        return null;
+      }
+
+      function inspect(element, level) {
+        if (element instanceof HTMLTableElement)
+          collapseElement(getEntity(element, HTMLTableSectionElement), level);
+        for (let i = 0, ilen = element.childNodes.length; i < ilen; ++i)
+          inspect(element.childNodes[i], level + 1);
+      }
+
+      function loadInit() {
+        inspect(document, 0);
+      }
+
+    </script>
+</head>
+
+<body onload="loadInit()">
+
+<!--
+<h2>CSS Arrows</h2>
+<p>Right arrow: <i class="arrow right"></i></p>
+<p>Left arrow: <i class="arrow left"></i></p>
+<p>Up arrow: <i class="arrow up"></i></p>
+<p>Down arrow: <i class="arrow down"></i></p>
+-->
+
+
+<table class="show-table">
+    <tr>
+        <td>
+            <h3><p style="cursor: pointer;"><i class="arrow down"></i>&nbsp;</nb> AAPL</p></h3>
+        </td>
+    </tr>
+
+    <tr>
+        <td>
+            <table class="show-table">
+                <tr>
+                    <td>Summary</td>
+                    <td></td>
+                </tr>
+
+                <tr>
+                    <td>maxAge</td>
+                    <td>1</td>
+                </tr>
+
+                <tr>
+                    <td>priceHint</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>previousClose</td>
+                    <td>149.4</td>
+                </tr>
+                <tr>
+                    <td>open</td>
+                    <td>147.11</td>
+                </tr>
+                <tr>
+                    <td>dayLow</td>
+                    <td>145.7202</td>
+                </tr>
+                <tr>
+                    <td>dayHigh</td>
+                    <td>147.19</td>
+                </tr>
+                <tr>
+                    <td>regularMarketPreviousClose</td>
+                    <td>149.4</td>
+                </tr>
+                <tr>
+                    <td>regularMarketOpen</td>
+                    <td>147.11</td>
+                </tr>
+                <tr>
+                    <td>regularMarketDayLow</td>
+                    <td>145.7202</td>
+                </tr>
+                <tr>
+                    <td>regularMarketDayHigh</td>
+                    <td>147.19</td>
+                </tr>
+                <tr>
+                    <td>dividendRate</td>
+                    <td>0.92</td>
+                </tr>
+                <tr>
+                    <td>dividendYield</td>
+                    <td>0.0062</td>
+                </tr>
+                <tr>
+                    <td>exDividendDate</td>
+                    <td>"2023-02-10T00:00:00.000Z"</td>
+                </tr>
+                <tr>
+                    <td>payoutRatio</td>
+                    <td>0.1545</td>
+                </tr>
+                <tr>
+                    <td>fiveYearAvgDividendYield</td>
+                    <td>0.96</td>
+                </tr>
+                <tr>
+                    <td>beta</td>
+                    <td>1.277894</td>
+                </tr>
+                <tr>
+                    <td>trailingPE</td>
+                    <td>25.382353</td>
+                </tr>
+                <tr>
+                    <td>forwardPE</td>
+                    <td>22.296354</td>
+                </tr>
+                <tr>
+                    <td>volume</td>
+                    <td>55344942</td>
+                </tr>
+                <tr>
+                    <td>regularMarketVolume</td>
+                    <td>55344942</td>
+                </tr>
+                <tr>
+                    <td>averageVolume</td>
+                    <td>75324539</td>
+                </tr>
+                <tr>
+                    <td>averageVolume10days</td>
+                    <td>58793970</td>
+                </tr>
+                <tr>
+                    <td>averageDailyVolume10Day</td>
+                    <td>58793970</td>
+                </tr>
+                <tr>
+                    <td>bid</td>
+                    <td>146.39</td>
+                </tr>
+                <tr>
+                    <td>ask</td>
+                    <td>146.4</td>
+                </tr>
+                <tr>
+                    <td>bidSize</td>
+                    <td>1000</td>
+                </tr>
+                <tr>
+                    <td>askSize</td>
+                    <td>1300</td>
+                </tr>
+                <tr>
+                    <td>marketCap</td>
+                    <td>2321231118336</td>
+                </tr>
+                <tr>
+                    <td>fiftyTwoWeekLow</td>
+                    <td>124.17</td>
+                </tr>
+                <tr>
+                    <td>fiftyTwoWeekHigh</td>
+                    <td>179.61</td>
+                </tr>
+                <tr>
+                    <td>priceToSalesTrailing12Months</td>
+                    <td>5.9897017</td>
+                </tr>
+                <tr>
+                    <td>fiftyDayAverage</td>
+                    <td>140.5632</td>
+                </tr>
+                <tr>
+                    <td>twoHundredDayAverage</td>
+                    <td>147.2006</td>
+                </tr>
+                <tr>
+                    <td>trailingAnnualDividendRate</td>
+                    <td>0.91</td>
+                </tr>
+                <tr>
+                    <td>trailingAnnualDividendYield</td>
+                    <td>0.0060910312</td>
+                </tr>
+                <tr>
+                    <td>currency</td>
+                    <td>"USD"</td>
+                </tr>
+                <tr>
+                    <td>fromCurrency</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td>toCurrency</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td>lastMarket</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td>coinMarketCapLink</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td>algorithm</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td>tradeable</td>
+                    <td>false</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+
+    <tr>
+        <td>
+            <table class="show-table">
+                <tr>
+                    <td>Detail</td>
+                    <td></td>
+                </tr>
+
+                <tr>
+                    <td>maxAge</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td>preMarketSource</td>
+                    <td>"FREE_REALTIME"</td>
+                </tr>
+                <tr>
+                    <td>postMarketChangePercent</td>
+                    <td>-0.0023857001</td>
+                </tr>
+                <tr>
+                    <td>postMarketChange</td>
+                    <td>-0.350006</td>
+                </tr>
+                <tr>
+                    <td>postMarketTime</td>
+                    <td>"2023-02-25T00:59:56.000Z"</td>
+                </tr>
+                <tr>
+                    <td>postMarketPrice</td>
+                    <td>146.36</td>
+                </tr>
+                <tr>
+                    <td>postMarketSource</td>
+                    <td>"FREE_REALTIME"</td>
+                </tr>
+                <tr>
+                    <td>regularMarketChangePercent</td>
+                    <td>-0.01800527</td>
+                </tr>
+                <tr>
+                    <td>regularMarketChange</td>
+                    <td>-2.6899872</td>
+                </tr>
+                <tr>
+                    <td>regularMarketTime</td>
+                    <td>"2023-02-24T21:00:04.000Z"</td>
+                </tr>
+                <tr>
+                    <td>priceHint</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <td>regularMarketPrice</td>
+                    <td>146.71</td>
+                </tr>
+                <tr>
+                    <td>regularMarketDayHigh</td>
+                    <td>147.19</td>
+                </tr>
+                <tr>
+                    <td>regularMarketDayLow</td>
+                    <td>145.7202</td>
+                </tr>
+                <tr>
+                    <td>regularMarketVolume</td>
+                    <td>55344942</td>
+                </tr>
+                <tr>
+                    <td>averageDailyVolume10Day</td>
+                    <td>58793970</td>
+                </tr>
+                <tr>
+                    <td>averageDailyVolume3Month</td>
+                    <td>75324539</td>
+                </tr>
+                <tr>
+                    <td>regularMarketPreviousClose</td>
+                    <td>149.4</td>
+                </tr>
+                <tr>
+                    <td>regularMarketSource</td>
+                    <td>"FREE_REALTIME"</td>
+                </tr>
+                <tr>
+                    <td>regularMarketOpen</td>
+                    <td>147.11</td>
+                </tr>
+                <tr>
+                    <td>exchange</td>
+                    <td>"NMS"</td>
+                </tr>
+                <tr>
+                    <td>exchangeName</td>
+                    <td>"NasdaqGS"</td>
+                </tr>
+                <tr>
+                    <td>exchangeDataDelayedBy</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>marketState</td>
+                    <td>"CLOSED"</td>
+                </tr>
+                <tr>
+                    <td>quoteType</td>
+                    <td>"EQUITY"</td>
+                </tr>
+                <tr>
+                    <td>symbol</td>
+                    <td>"AAPL"</td>
+                </tr>
+                <tr>
+                    <td>underlyingSymbol</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td>shortName</td>
+                    <td>"Apple Inc."</td>
+                </tr>
+                <tr>
+                    <td>longName</td>
+                    <td>"Apple Inc."</td>
+                </tr>
+                <tr>
+                    <td>currency</td>
+                    <td>"USD"</td>
+                </tr>
+                <tr>
+                    <td>quoteSourceName</td>
+                    <td>"Nasdaq Real Time Price"</td>
+                </tr>
+                <tr>
+                    <td>currencySymbol</td>
+                    <td>"$"</td>
+                </tr>
+                <tr>
+                    <td>fromCurrency</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td>toCurrency</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td>lastMarket</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td>marketCap</td>
+                    <td>2321231118336</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

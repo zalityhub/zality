@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<html lang="en">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="utf-8">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="public/css/styles.css">
+
+    <title>Portfolio</title>
+</head>
+
+
+<body class="fade_in" onload="onLoad()">
+
+<script>
+  function setMenuList() {
+    let menuList = '&nbsp;&nbsp;&nbsp;&nbsp;<a href="/index.html" class="menu_btn">HOME</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/about.html" class="menu_btn">ABOUT</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/portfolio.html" class="menu_btn">PORTFOLIO</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="/contact.html" class="menu_btn">CONTACT</a>';
+    if ('{{express}}' === 'yes')
+      menuList = menuList + '&nbsp;&nbsp;&nbsp;&nbsp;<a href="/lookup.html" class="menu_btn">DIVERCTI</a>';
+    const menus = document.getElementsByClassName('menu_list');
+    if (menus.length > 0)
+      menus[0].innerHTML = menuList;
+  }
+  function onLoad() {
+    setMenuList();
+  }
+</script>
+
+<div class="social_links">
+    <span><a href="https://www.twitter.com/zalityllc"><i class="fab fa-twitter"></i></a></span>
+    <span><a href="https://www.facebook.com/zalityllc"><i class="fab fa-facebook-f"></i></a></span>
+    <span><a href="https://www.youtube.com/channel/UCcY9hw5COssAmHzPbD976EQ"><i class="fab fa-youtube"></i></a></span>
+    <span><a href="https://www.instagram.com/zalityllc"><i class="fab fa-instagram"></i></a></span>
+</div>
+
+<div>
+    <a href="/index.html">
+        <img class="logoi" src="public/images/logo2.png" alt="">
+        <span class="logo1">Zality</span><span class="logo2">.com</span>
+    </a>
+</div>
+<br>
+
+<div class="menu_list">
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/index.html" class="menu_btn">HOME</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/about.html" class="menu_btn">ABOUT</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/portfolio.html" class="menu_btn">PORTFOLIO</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/contact.html" class="menu_btn">CONTACT</a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="/lookup.html" class="menu_btn">DIVERCTI</a>
+</div>
+
+<div class="center_blue_rale28_bold">
+    Our Portfolio
+</div>
+<br> <br>
+
+<div class="body_white_arial16_100">
+    We create robust and fault resilient systems by leveraging our experience in advanced network infrastructures, OLTP
+    Transaction Switching and payment and ATM switches on these platforms:<br>
+    <ul>
+        <li>Tandem/HP-NONSTOP</li>
+        <li>Tandem Guardian</li>
+        <li>ACI Base24</li>
+        <li>GoldenGate</li>
+        <li>CONNEX EFT Software</li>
+        <li>Stratus VOS</li>
+        <li>RedHat/CenTOS/Ubuntu Linux</li>
+        <li>Sun Solaris</li>
+    </ul>
+    We focus on ultra-high integrity processing primarily in the banking and point-of-sale merchant industries, credit
+    card switch processing, telephony, IVR and Voice over IP (VOIP) technology using VXML/CCXML, Session Initiation
+    Protocol (SIP), ISDN/PRI interfaces.
+    <br> <br>
+    We have specific expertise with Tandem/HP-Nonstop tools TAL, TACL, SCOBOL, Pathway, NetBatch, NDMCOM, Atalla Host
+    Security Module(HSM), Key Management.
+    <br> <br>
+
+    <h3>Experiences</h3>
+    <ul>
+        <li><b>Visa</b><br>
+            Enhancesments to the Visa HP/Tandem Guardian Nonstop credit authorization platform, changing existing Connex
+            TAL/Cobol and C applications to support active redundant processing, Automatic failover to avoid
+            catastrophic events.
+            <br><br>
+        </li>
+        <li><b>US Bank/Elavon</b><br>
+            Responsible for the design and implementation of the Elavon POS network architecture on a fault resilient
+            redundant array of Redhat Enterprise Linux servers supporting all POS messaging protocols. Responsible for
+            the design of the scalable back office and settlement systems. Implementation is ANSI C with embedded Sybase
+            SQL. Designed and developed several authorization modules in COBOL for the Stratus VOS authorization
+            platform. Currently converting the systems from Linux 32 bit to 64 bit architecture.
+            <br><br>
+        </li>
+        <li><b><a href="https://www.fisglobal.com/en">
+            <img src="public/images/fis.png" alt="">
+            FIS</a></b><br>
+            Designed and implemented enhancements of FIS ATM infrastructures on HP/Tandem non-stop architecture using
+            TAL and CONNEX EFT. ATM enhancements to report internal errors and status of all ATM devices and added fraud
+            prevention by tracking currency tray disbursement including bill counts and denomination. Also designed
+            dynamic currency conversion subsystem to an FIS associate.
+            <br><br>
+        </li>
+        <li><b>Fiserv Commercial Banking Solutions (formerly known as Online Banking Solutions)</b><br>
+            Architect and developer for ACH, treasury management, funds transfer, card payment systems, Android and
+            iPhone mobile applications. Also designed/developed encrypted Keyboard Driver for Win32/64; Captures
+            keyboard interrupt events, encrypts keys and delivers to companion Mozilla XPCom and/or Plugin and/or Java
+            via JNI. Implemented device driver in C using WinDDK and Moz XPcom and a Plugin using C++ and xulrunner and
+            jxBrowser.
+            <br>
+            Developed technology providing next-generation Web based Cash Management and Business Banking information,
+            payment, data delivery and automated enrollment solutions to Financial Institutions using
+            Java/J2EE/Javascript on Linux with Postgres SQL.
+            <br>Company aquired by Fiserv<br><br>
+        </li>
+        <li><b>Coinpliance, LLC</b><br>
+            Developer of BitCoin compliance system which included block-chain verification, Know-Your-Customer (KYC) and
+            AntiMoneyLaundering (AML) real-time processing platform using node.js, Express, Mongodb, ORM, HTML screen
+            scraping and REST-API protocol. Interfaced to geo-address validation, OFAC, Treasury SDN validation.
+            Responsible for establishing Coinpliance's technical vision and leading all aspects of technology
+            development, according to its strategic direction and growth objectives. Assure the successful execution of
+            the company's business mission through development and deployment of the company's web presence. This
+            requires envisioning the company's service offerings as a web-based business, leading implementation of web
+            applications, and planning for risk and growth.
+            <br><br>
+        </li>
+        <li><b>FirstData</b><br>
+            Developer at Buypass for TAL based front end interfaces, Base24, ISO8583 and proprietary format. Supported
+            TAL/C based authorizer gateways to ACCEL, NYCS, STAR, MAESTRO and PULSE networks. Developer for changes to
+            support Pinless Debit transactions to include back office Guardian COBOL batch and SQL programs.
+            <br><br>
+        </li>
+        <li><b>PierceTech</b><br>
+            Chief Software Officer responsible for company's technical vision, product architecture and for developing
+            overall platform
+            strategies while providing technical leadership to all engineering departments. Implemented call center
+            agent screen 'pop' application platform interfaced to Avaya switch using NetMerge/CtConnect. Implemented
+            data exchange system for Citizens Bank (RI) software using XML over IBM/MQ interfaces.
+            <br><br>
+        </li>
+    </ul>
+</div>
+
+</body>
+</html>
