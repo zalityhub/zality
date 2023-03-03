@@ -5,15 +5,13 @@ const stringify = require('json-stringify-safe');
 
 const nx = require('@zality/nodejs/util');
 
-const env = nx.getEnv(null, 'chatgpt', true);
+const env = nx.getEnv('chatgpt', true);
 
 
-function Ask(question, options) {
+function Ask(question, dialog, config) {
   const https = require('https');
 
-  const url = 'https://api.openai.com/v1/completions';
-
-  const setup = {
+  const _config = {
     hostname: 'api.openai.com',
     port: 443,
     path: '/v1/completions',
@@ -21,11 +19,15 @@ function Ask(question, options) {
     headers: {
       "Accept": 'application/json',
       "Content-Type": 'application/json',
-      "Authorization": `Bearer ${env.OPENAI_API_KEY}`
+      "Authorization": 'Bearer YOUR_API_KEY_HERE'
     }
-  };
+  }
 
-  const req = https.request(setup, (res) => {
+  if ( nx.isNull(config) )
+    config = {};
+  config = {..._config, ...config};
+
+  const req = https.request(config, (res) => {
     res.setEncoding('utf8');
     let body = '';
 
@@ -50,7 +52,7 @@ function Ask(question, options) {
   });
 
 // write data to request body
-  let body = {
+  const _dialog = {
     model: "text-davinci-003",
     temperature: 0,
     max_tokens: 1000,
@@ -60,21 +62,22 @@ function Ask(question, options) {
     stop: ["\"\"\""]
   };
 
-  if ( ! nx.isNull(options) )
-    body = {...body, ...options};
-  body.prompt = question;
-  req.write(JSON.stringify(body));
+  if ( nx.isNull(dialog) )
+    dialog = {};
+  dialog = {..._dialog, ...dialog};
+  dialog.prompt = question;
+  req.write(JSON.stringify(dialog));
   req.end();
 }
 
 
 const question = process.argv.slice(2).join(' ');
 if (question.length > 0) {
-  Ask(question, env.options);
+  Ask(question, env.dialog, env.config);
 } else {
   readline.createInterface(process.stdin, process.stdout).on('line', (question) => {
     if( question.length <= 0 )
       process.exit(0);
-    Ask(question, env.options);
+    Ask(question, env.dialog, env.config);
   });
 }
