@@ -1,74 +1,133 @@
-// Create a TCP/IP server
 const net = require('net');
+const argv = process.argv.slice(2).join(' ');
 
-const server = net.createServer(function (c) {
-  // 'connection' listener
-  console.log('client connected');
+let port = 8080;
+if (argv.length > 0)
+  port = argv.pop();
 
-  function log(title, data) {
+const server = net.createServer(function (client) {
+
+  function log(desc, data) {
     data = data ? data.toString() : '';
-    console.log(`${title}: ${data}`);
+    console.log(`${desc.toString()}: ${data}`);
   }
 
-  c.on('close', function (data) {
-    log('close', data);
+// events
+  client.on('connection', function (data) {
+
+    log(`server.connection`, data);
+
+    const proxy = new net.Socket();
+    proxy.connect(8080, '127.0.0.1', function () {
+      log(`proxy.connection`, 'Connected');
+    });
+
+    proxy.on('close', function (data) {
+      log(`proxy.close`, data);
+    })
+
+    proxy.on('error', function (data) {
+      log(`proxy.error`, data);
+    })
+
+    proxy.on('listening', function (data) {
+      log(`proxy.listening`, data);
+    })
+
+    proxy.on('drop', function (data) {
+      log(`proxy.drop`, data);
+    })
+
+    proxy.on('close', function (data) {
+      log(`proxy.close`, data);
+    })
+
+    proxy.on('connect', function (data) {
+      log(`proxy.connect`, data);
+    })
+
+    proxy.on('data', function (data) {
+      log(`proxy.data`, data);
+    })
+
+    proxy.on('drain', function (data) {
+      log(`proxy.drain`, data);
+    })
+
+    proxy.on('end', function (data) {
+      log(`proxy.end`, data);
+    })
+
+    proxy.on('error', function (data) {
+      log(`proxy.error`, data);
+    })
+
+    proxy.on('lookup', function (data) {
+      log(`proxy.lookup`, data);
+    })
+
+    proxy.on('ready', function (data) {
+      log(`proxy.ready`, data);
+    })
+
+    proxy.on('timeout', function (data) {
+      log(`proxy.timeout`, data);
+    })
   })
 
-  c.on('connection', function (data) {
-    log('connection', data);
+  client.on('close', function (data) {
+    log(`server.close`, data);
   })
 
-  c.on('error', function (data) {
-    log('error', data);
+  client.on('error', function (data) {
+    log(`server.error`, data);
   })
 
-  c.on('listening', function (data) {
-    log('listening', data);
+  client.on('listening', function (data) {
+    log(`server.listening`, data);
   })
 
-  c.on('drop', function (data) {
-    log('drop', data);
+  client.on('drop', function (data) {
+    log(`server.drop`, data);
   })
 
-  c.on('close', function (data) {
-    log('close', data);
+  client.on('close', function (data) {
+    log(`server.close`, data);
   })
 
-  c.on('connect', function (data) {
-    log('connect', data);
+  client.on('connect', function (data) {
+    log(`server.connect`, data);
   })
 
-  c.on('data', function (data) {
-    log('data', data);
+  client.on('data', function (data) {
+    log(`server.data`, data);
   })
 
-  c.on('drain', function (data) {
-    log('drain', data);
+  client.on('drain', function (data) {
+    log(`server.drain`, data);
   })
 
-  c.on('end', function (data) {
-    log('end', data);
+  client.on('end', function (data) {
+    log(`server.end`, data);
   })
 
-  c.on('error', function (data) {
-    log('error', data);
+  client.on('error', function (data) {
+    log(`server.error`, data);
   })
 
-  c.on('lookup', function (data) {
-    log('lookup', data);
+  client.on('lookup', function (data) {
+    log(`server.lookup`, data);
   })
 
-  c.on('ready', function (data) {
-    log('ready', data);
+  client.on('ready', function (data) {
+    log(`server.ready`, data);
   })
 
-  c.on('timeout', function (data) {
-    log('timeout', data);
+  client.on('timeout', function (data) {
+    log(`server.timeout`, data);
   })
 })
 
-
-server.listen(8000, function () {
-  console.log('server listening on port http://localhost:8000');
+server.listen(port, function () {
+  console.log('server listening on port http://localhost:8080');
 })
-
