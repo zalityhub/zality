@@ -8,23 +8,12 @@ const nx = require('@zality/nodejs/util');
 const env = nx.getEnv(null, 'chatgpt', true);
 
 
-function Ask(question) {
+function Ask(question, options) {
   const https = require('https');
 
   const url = 'https://api.openai.com/v1/completions';
 
-  const postData = {
-    model: "text-davinci-003",
-    prompt: 'hi',
-    temperature: 0,
-    max_tokens: 1000,
-    top_p: 1.0,
-    frequency_penalty: 0.0,
-    presence_penalty: 0.0,
-    stop: ["\"\"\""]
-  };
-
-  const options = {
+  const setup = {
     hostname: 'api.openai.com',
     port: 443,
     path: '/v1/completions',
@@ -36,7 +25,7 @@ function Ask(question) {
     }
   };
 
-  const req = https.request(options, (res) => {
+  const req = https.request(setup, (res) => {
     res.setEncoding('utf8');
     let body = '';
 
@@ -46,13 +35,13 @@ function Ask(question) {
 
     res.on('end', () => {
       const response = JSON.parse(body);
-      console.log(stringify(response));
+      // console.log(stringify(response));
       if (nx.isNull(response) || nx.isNull(response.choices)
         || response.choices.length <= 0 || nx.isNull(response.choices[0].text))
         return console.error(`${stringify(body, null, 4)} is an unexpected response`);
-      let text = stringify(response.choices[0].text).toString();
-      text = text.replaceAll('\\n', '');
-      console.log(text);
+      let text = response.choices[0].text.toString();
+      // text = text.replaceAll('\\n', '');
+      console.log(`${text}\n`);
     });
   });
 
@@ -61,19 +50,31 @@ function Ask(question) {
   });
 
 // write data to request body
-  postData.prompt = question;
-  req.write(JSON.stringify(postData));
+  let body = {
+    model: "text-davinci-003",
+    temperature: 0,
+    max_tokens: 1000,
+    top_p: 1.0,
+    frequency_penalty: 0.0,
+    presence_penalty: 0.0,
+    stop: ["\"\"\""]
+  };
+
+  if ( ! nx.isNull(options) )
+    body = {...body, ...options};
+  body.prompt = question;
+  req.write(JSON.stringify(body));
   req.end();
 }
 
 
 const question = process.argv.slice(2).join(' ');
 if (question.length > 0) {
-  Ask(question);
+  Ask(question, env.options);
 } else {
   readline.createInterface(process.stdin, process.stdout).on('line', (question) => {
     if( question.length <= 0 )
       process.exit(0);
-    Ask(question);
+    Ask(question, env.options);
   });
 }
