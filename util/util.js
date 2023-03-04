@@ -196,7 +196,7 @@ nx.getEnv = function(section, isRequired, file) {
   if (nx.isNull(isRequired))
     isRequired = false;
   if (nx.isNull(file))
-    file = `${process.env.HOME}/etc/env.json`;
+    file = `c:/cygwin64/home/hbray/etc/env.json`;
   const env = nx.parseJsonFile(file);
   if(isRequired && (nx.isNull(env) || ((!nx.isNull(section)) && nx.isNull(env[section]))))
     nx.fatal(`unable to continue without a ${file}.${section}`);

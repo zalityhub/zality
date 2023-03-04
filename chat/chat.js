@@ -9,9 +9,8 @@ const env = nx.getEnv('chatgpt', true);
 
 
 function Ask(question, dialog, config) {
-  const https = require('https');
-
   const _config = {
+    type:     'http',
     hostname: 'api.openai.com',
     port: 443,
     path: '/v1/completions',
@@ -27,7 +26,8 @@ function Ask(question, dialog, config) {
     config = {};
   config = {..._config, ...config};
 
-  const req = https.request(config, (res) => {
+  const http = require(config.type);
+  const req = http.request(config, (res) => {
     res.setEncoding('utf8');
     let body = '';
 
@@ -36,14 +36,20 @@ function Ask(question, dialog, config) {
     });
 
     res.on('end', () => {
-      const response = JSON.parse(body);
-      // console.log(stringify(response));
-      if (nx.isNull(response) || nx.isNull(response.choices)
-        || response.choices.length <= 0 || nx.isNull(response.choices[0].text))
-        return console.error(`${stringify(body, null, 4)} is an unexpected response`);
-      let text = response.choices[0].text.toString();
-      // text = text.replaceAll('\\n', '');
-      console.log(`${text}\n`);
+      let response;
+      try {
+        response = JSON.parse(body);
+        if (nx.isNull(response) || nx.isNull(response.choices)
+          || response.choices.length <= 0 || nx.isNull(response.choices[0].text))
+          response = `${stringify(body, null, 4)} is an unexpected response`;
+        else
+          response = response.choices[0].text.toString();
+      } catch (err)
+      {
+        response = body;
+      }
+
+      console.log(`${response}\n`);
     });
   });
 
@@ -71,7 +77,7 @@ function Ask(question, dialog, config) {
 }
 
 
-const question = process.argv.slice(2).join(' ');
+const question = process.argv.slice(2).join(' ').toString();
 if (question.length > 0) {
   Ask(question, env.dialog, env.config);
 } else {

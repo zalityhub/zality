@@ -1,4 +1,4 @@
 cd $(dirname $0)
 echo ''
-node ask.js $*
+node chat.js $*
 echo ''
