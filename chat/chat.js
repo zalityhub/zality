@@ -22,8 +22,7 @@ function Chat(question, dialog, config) {
     }
   }
 
-  if ( nx.isNull(config) )
-    config = {};
+  config = config ? config : {};
   config = {..._config, ...config};
 
   const http = require(config.type);
@@ -39,11 +38,7 @@ function Chat(question, dialog, config) {
       let response;
       try {
         response = JSON.parse(body);
-        if (nx.isNull(response) || nx.isNull(response.choices)
-          || response.choices.length <= 0 || nx.isNull(response.choices[0].text))
-          response = `${stringify(body, null, 4)} is an unexpected response`;
-        else
-          response = response.choices[0].text.toString();
+        response = response.choices[0].text.toString();
       } catch (err)
       {
         response = body;
@@ -68,8 +63,7 @@ function Chat(question, dialog, config) {
     stop: ["\"\"\""]
   };
 
-  if ( nx.isNull(dialog) )
-    dialog = {};
+  dialog = dialog ? dialog : {};
   dialog = {..._dialog, ...dialog};
   dialog.prompt = question;
   req.write(JSON.stringify(dialog));
