@@ -8,7 +8,7 @@ const nx = require('@zality/nodejs/util');
 const env = nx.getEnv('chatgpt', true);
 
 
-function Ask(question, dialog, config) {
+function Chat(question, dialog, config) {
   const _config = {
     type:     'http',
     hostname: 'api.openai.com',
@@ -79,11 +79,11 @@ function Ask(question, dialog, config) {
 
 const question = process.argv.slice(2).join(' ').toString();
 if (question.length > 0) {
-  Ask(question, env.dialog, env.protocol_config);
+  Chat(question, env.dialog, env.protocol_config);
 } else {
   readline.createInterface(process.stdin, process.stdout).on('line', (question) => {
     if( question.length <= 0 )
       process.exit(0);
-    Ask(question, env.dialog, env.protocol_config);
+    Chat(question, env.dialog, env.protocol_config);
   });
 }
