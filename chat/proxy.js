@@ -6,10 +6,10 @@ const app = express();
 const https = require('https');
 const http = require('http');
 
-const env = nx.getEnv('proxy', true);
+const env = nx.getEnv('chatgpt', true);
 
-const targetUrl = process.env.TARGET_URL || env.targetUrl;
-const proxyServerPort = process.env.PROXY_SERVER_PORT || env.proxyServerPort;
+const targetUrl = env.proxy.targetUrl;
+const proxyServerPort = env.proxy.proxyServerPort;
 
 if (targetUrl === undefined || proxyServerPort === undefined) {
   console.error('Cannot continue without targetUrl and proxyServerPort');
