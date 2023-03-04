@@ -96,7 +96,6 @@ function Web(argv) {
     argv = env.proxy.proxyServerUrl;
 
   const url = Url.parse(argv);
-  // console.log(stringify(url));
 
   const app = express();
   app.use(bodyParser.json());
