@@ -3,9 +3,9 @@ const fs = require('fs');
 
 function px(kf) {
   const content = require('fs').readFileSync(kf, 'utf8');
-  const cont_array = content.split("\n");
+  const cont_array = content.split('\n');
   const serial_line = cont_array[cont_array.length - 2];
-  const serial = serial_line.split(":");
+  const serial = serial_line.split(':');
   return serial[1].slice(1).toString();
 }
 

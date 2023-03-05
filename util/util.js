@@ -1,6 +1,7 @@
 nx = exports;
 
 const process = require('process');
+const platform = require('os').platform();
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
@@ -192,15 +193,19 @@ nx.parseJsonFile = function (file) {
   }
 }
 
-nx.getEnv = function(section, isRequired, file) {
+nx.getEnv = function (section, isRequired, file) {
   if (nx.isNull(isRequired))
     isRequired = false;
-  if (nx.isNull(file))
-    file = `c:/cygwin64/home/hbray/etc/env.json`;
+  if (nx.isNull(file)) {
+    if (platform === 'win32')
+      file = `c:/cygwin64/home/hbray/etc/env.json`;
+    else
+      file = `/home/hbray/etc/env.json`;
+  }
   const env = nx.parseJsonFile(file);
-  if(isRequired && (nx.isNull(env) || ((!nx.isNull(section)) && nx.isNull(env[section]))))
+  if (isRequired && (nx.isNull(env) || ((!nx.isNull(section)) && nx.isNull(env[section]))))
     nx.fatal(`unable to continue without a ${file}.${section}`);
-  return nx.isNull(section) ? env: env[section];
+  return nx.isNull(section) ? env : env[section];
 }
 
 
@@ -409,7 +414,8 @@ nx.fileExists = function (path) {
 
 
 nx.getBody = function (req, cb) {
-  cb = cb ? cb : function () { };
+  cb = cb ? cb : function () {
+  };
   try {
     const body = [];
     req.on('data', (chunk) => {
@@ -427,7 +433,8 @@ nx.getBody = function (req, cb) {
 
 
 nx.fsIterate = function (dir, cb) {
-  cb = cb ? cb : function () { };
+  cb = cb ? cb : function () {
+  };
   fs.readdir(dir, function (err, objects) {
     if (err) {
       nx.logError(`Could not list ${objects}`, err);
@@ -476,7 +483,7 @@ nx.countObjectProperties = function (obj) {
 nx.getMemoryStats = function () {
   return Object.entries(process.memoryUsage()).reduce((carry, [key, value]) => {
     return `${carry}${key}:${Math.round(value / 1024 / 1024 * 100) / 100}MB;`;
-  }, "");
+  }, '');
 }
 
 
@@ -585,13 +592,7 @@ nx.rad2deg = function (rad) {
 
 
 nx.launchBrowser = function (url) {
-  const {platform} = require('os');
   const {exec} = require('child_process');
-
-  const WINDOWS_PLATFORM = 'win32';
-  const MAC_PLATFORM = 'darwin';
-
-  const osPlatform = platform();
 
   if (url === undefined) {
     console.error('Please enter a URL, e.g. "http://google.com"');
@@ -601,9 +602,9 @@ nx.launchBrowser = function (url) {
   let command;
   let opts = {};
 
-  if (osPlatform === WINDOWS_PLATFORM) {
+  if (platform === 'win32') {
     command = `"c:\\Program Files\\Mozilla Firefox\\firefox.exe" ${url}`;
-  } else if (osPlatform === MAC_PLATFORM) {
+  } else if (platform === 'darwin') {
     command = `open -a "Google Chrome" ${url}`;
   } else {
     command = `google-chrome --no-sandbox ${url}`;
@@ -620,10 +621,10 @@ nx.getchar = function (cb) {
     return buffer.toString('utf8');
   }
   const stdin = process.stdin;
-  stdin.setRawMode( true );
+  stdin.setRawMode(true);
   stdin.resume();
-  stdin.setEncoding( 'utf8' );
-  stdin.on( 'data', function( key ){
+  stdin.setEncoding('utf8');
+  stdin.on('data', function (key) {
     key = key.toString();
     cb(null, key.length, key);
   });
@@ -642,7 +643,8 @@ nx.putAscii = function (string) {
 }
 
 nx.puts = function (string, cb) {
-  cb = cb ? cb : function () { };
+  cb = cb ? cb : function () {
+  };
   string = string ? string : '';
   return fs.write(1, string.toString(), cb);
 }

@@ -400,11 +400,7 @@ function divercti(req, res) {
 exports.init = function (main, fun, path) {
   exports.main = main;
 
-  const config = 'c:/cygwin64/home/hbray/etc/env.json';
-  const env = nx.parseJsonFile(config);
-  if(nx.isNull(env) || nx.isNull(env.telnyx))
-    nx.fatal(`unable to continue without a telnyx configuration file: ${config}.telnyx`);
-  CallControl = env.telnyx;
+  CallControl = nx.getEnv('telnyx', true);
   CallControl.activeCalls = {};
   Telnyx = {api: [], calls: []};
   Telnyx.api.push(require('telnyx')(CallControl.apiKey));

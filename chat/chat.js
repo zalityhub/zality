@@ -24,9 +24,9 @@ function Chat(question, dialog, config, cb) {
       path: '/v1/completions',
       method: 'POST',
       headers: {
-        "Accept": 'application/json',
-        "Content-Type": 'application/json',
-        "Authorization": 'Bearer YOUR_API_KEY_HERE'
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer YOUR_API_KEY_HERE'
       }
     }
 
@@ -34,13 +34,13 @@ function Chat(question, dialog, config, cb) {
     config = {..._config, ...config};
 
     const _dialog = {
-      model: "text-davinci-003",
+      model: 'text-davinci-003',
       temperature: 0,
       max_tokens: 1000,
       top_p: 1.0,
       frequency_penalty: 0.0,
       presence_penalty: 0.0,
-      stop: ["\"\"\""]
+      stop: ['"""']
     };
 
     dialog = dialog ? dialog : {};
@@ -89,7 +89,7 @@ function Ask(question) {
 
 function Web(argv) {
 
-// "http://localhost:8080/chat"
+// 'http://localhost:8080/chat'
 
   argv = argv.join('');
   if (argv.length <= 0)

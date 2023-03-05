@@ -138,6 +138,6 @@ run = function (main) {
 
 module.exports = {
   run: run,
-  name: "Zality",
+  name: 'Zality',
   version: '1.x'
 };
