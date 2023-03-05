@@ -116,6 +116,7 @@
 
 <script>
   function fetch(text, cb) {
+  cb = cb || funcion(){};
     const xhr = new XMLHttpRequest();
     xhr.open('GET', '/log', true);
 
@@ -133,6 +134,7 @@
 
 <script>
   function getQuote(symbol, cb) {
+  cb = cb || funcion(){};
     const url = `http://localhost:8080/v10/finance/quoteSummary/${symbol}?modules=earningsHistory`;
 
     function reqListener() {

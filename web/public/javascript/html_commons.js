@@ -51,6 +51,7 @@ function get_number(input) {
 }
 
 function V2kFunction(method, func, args, body, cb) {
+  cb = cb || funcion(){};
     try {
 		if(V2kHost == null) {
 /*
@@ -75,8 +76,7 @@ function V2kFunction(method, func, args, body, cb) {
 		xhr.setRequestHeader('Content-Type', 'text/plain');
 		xhr.onreadystatechange = function () {
 			if (xhr.readyState === XMLHttpRequest.DONE && xhr.status == 200) {
-				if (cb)
-					cb(null, xhr.response);
+  			cb(null, xhr.response);
 			}
 		};
 		xhr.send(body);

@@ -95,7 +95,7 @@ function CallProgressEvent(ev) {
 
 
 function getFile(opts, cb) {
-  cb = cb ? cb: function() {};
+  cb = cb || funcion(){};
 
   if (!opts.file) {
     const etext = nx.logError(`missing file`);
@@ -122,7 +122,7 @@ function getFile(opts, cb) {
 
 
 function hangup(opts, cb) {
-  cb = cb ? cb: function() {};
+  cb = cb || funcion(){};
   let call = null;
 
   if (opts.channel)
@@ -160,7 +160,7 @@ function fixNbr(nbr) {
 
 
 function dial(opts, cb) {
-  cb = cb ? cb: function() {};
+  cb = cb || funcion(){};
   if (!opts.to) {
     const etext = nx.logError(`missing to`);
     cb(etext);
@@ -211,7 +211,7 @@ function dial(opts, cb) {
 
 
 function sdial(opts, cb) {
-  cb = cb ? cb: function() {};
+  cb = cb || funcion(){};
   if (!opts.to) {
     const etext = nx.logError(`missing to`);
     cb(etext);
@@ -238,7 +238,7 @@ function sdial(opts, cb) {
 }
 
 function lookup(opts, cb) {
-  cb = cb ? cb: function() {};
+  cb = cb || funcion(){};
   if (!opts.nbr) {
     const etext = nx.logError('missing number');
     cb(etext);

@@ -42,6 +42,7 @@ function file_stat(fn) {
 
 
 function get_files(dir, exp, cb) {
+  cb = cb || funcion(){};
   const files = [];
   const list = fs.readdirSync(dir);
   for (const i in list) {
@@ -57,8 +58,7 @@ function get_files(dir, exp, cb) {
     }
   }
 
-  if (cb)
-    cb(null, files);
+  cb(null, files);
   return files;
 }
 

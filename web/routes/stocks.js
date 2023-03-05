@@ -9,6 +9,7 @@ const yahooFinance = require('yahoo-finance');
 
 
 function getQuote(symbol, res, cb) {
+  cb = cb || funcion(){};
   yahooFinance.quote({
     symbol: 'AAPL',
     modules: [ 'price', 'summaryDetail' ] // see the docs for the full list

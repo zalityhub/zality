@@ -13,8 +13,7 @@ const env = nx.getEnv('chatgpt', true);
 function Chat(question, dialog, config, cb) {
 
   let response = '';
-  cb = cb ? cb : function () {
-  };
+  cb = cb || funcion(){};
 
   try {
     const _config = {
@@ -81,9 +80,9 @@ function Chat(question, dialog, config, cb) {
 
 
 function Ask(question, url) {
-  if(url && url.length > 0) {
+  if (url && url.length > 0) {
     const http = require('http');
-    if(url.indexOf('http') !== 0 )
+    if (url.indexOf('http') !== 0)
       url = `http://${url}`
     http.get(`${url}/?${question}`, res => {
       let response = ''
@@ -121,8 +120,8 @@ function StartWebService(argv) {
   app.get(`${url.path}*`, (req, res) => {
     try {
       let query = req.url.slice(url.path.length);
-      if(query.charAt(0) === '?' || query.charAt(0) === '&' ) {
-        query = query.slice(Math.max(1,query.indexOf('=')+1));
+      if (query.charAt(0) === '?' || query.charAt(0) === '&') {
+        query = query.slice(Math.max(1, query.indexOf('=') + 1));
       }
       console.log(`${query}\n`);
       Chat(query, env.dialog, env.protocol_config, function (err, response) {
@@ -157,7 +156,7 @@ function StartWebService(argv) {
 
 
 function quizLoop(url) {
-  if(!url )
+  if (!url)
     url = [];
   url = url.join('').toString();
   readline.createInterface(process.stdin, process.stdout).on('line', (question) => {
@@ -171,7 +170,7 @@ function quizLoop(url) {
 const argv = process.argv.slice(2);
 
 if (argv.length) {
-  switch(argv[0]) {
+  switch (argv[0]) {
     default:
       Ask(argv.join(' ').toString());
       break;
