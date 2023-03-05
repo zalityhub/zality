@@ -1,7 +1,7 @@
 nx = exports;
+nx.platform = require('os').platform();
 
 const process = require('process');
-const platform = require('os').platform();
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
@@ -197,7 +197,7 @@ nx.getEnv = function (section, isRequired, file) {
   if (nx.isNull(isRequired))
     isRequired = false;
   if (nx.isNull(file)) {
-    if (platform === 'win32')
+    if (nx.platform === 'win32')
       file = `c:/cygwin64/home/hbray/etc/env.json`;
     else
       file = `/home/hbray/etc/env.json`;
@@ -602,9 +602,9 @@ nx.launchBrowser = function (url) {
   let command;
   let opts = {};
 
-  if (platform === 'win32') {
+  if (nx.platform === 'win32') {
     command = `"c:\\Program Files\\Mozilla Firefox\\firefox.exe" ${url}`;
-  } else if (platform === 'darwin') {
+  } else if (nx.platform === 'darwin') {
     command = `open -a "Google Chrome" ${url}`;
   } else {
     command = `google-chrome --no-sandbox ${url}`;

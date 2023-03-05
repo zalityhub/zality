@@ -98,7 +98,7 @@ run = function (main) {
     const url = `http://${webServer.address().address}:${webServer.address().port}`;
     nx.log(`listening at ${url}`);
 
-    if (main.argv <= 0 || main.argv[0] != '-c') {
+    if (nx.platform === 'win32' && (main.argv <= 0 || main.argv[0] != '-c')) {
       function doCommand(cmd) {
         nx.puts('\n');
         if (nx.isNull(cmd) || cmd.length <= 0)

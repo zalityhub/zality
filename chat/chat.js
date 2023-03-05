@@ -80,14 +80,32 @@ function Chat(question, dialog, config, cb) {
 }
 
 
-function Ask(question) {
+function Ask(question, url) {
+  if(url && url.length > 0) {
+    const http = require('http');
+    if(url.indexOf('http') !== 0 )
+      url = `http://${url}`
+    http.get(`${url}/?${question}`, res => {
+      let response = ''
+
+      res.on('data', chunk => {
+        response += chunk
+      })
+
+      res.on('end', () => {
+        console.log(`${response}\n`);
+      })
+    })
+    return;
+  }
+
   Chat(question, env.dialog, env.protocol_config, function (err, response) {
     console.log(`${response}\n`);
   });
 }
 
 
-function Web(argv) {
+function StartWebService(argv) {
 
 // 'http://localhost:8080/chat'
 
@@ -138,16 +156,32 @@ function Web(argv) {
 }
 
 
-const argv = process.argv.slice(2);
-if (argv.length) {
-  if (argv[0] === '-w')
-    Web(argv.slice(1));
-  else
-    Ask(argv.join(' ').toString());
-} else {
+function quizLoop(url) {
+  if(!url )
+    url = [];
+  url = url.join('').toString();
   readline.createInterface(process.stdin, process.stdout).on('line', (question) => {
     if (question.length <= 0)
       process.exit(0);
-    Ask(question);
+    Ask(question, url);
   });
+}
+
+
+const argv = process.argv.slice(2);
+
+if (argv.length) {
+  switch(argv[0]) {
+    default:
+      Ask(argv.join(' ').toString());
+      break;
+    case '-w':
+      StartWebService(argv.slice(1));
+      break;
+    case '-s':
+      quizLoop(argv.slice(1));
+      break;
+  }
+} else {
+  quizLoop();
 }
