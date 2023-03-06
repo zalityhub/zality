@@ -386,7 +386,7 @@ function divercti(req, res) {
       nx.logError(err.toString());
       return res.end('error\n');
     }
-    processReq(req, res, req.body);
+    processReq(req, res, body);
   });
 }
 

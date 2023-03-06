@@ -46,6 +46,18 @@
   let oVoices = [];
   let tivl;
 
+  const BrowserDetail = {};
+
+  const ChatDialog = {
+    model: 'text-davinci-003',
+    temperature: 0,
+    max_tokens: 4000,
+    prompt: '',
+    top_p: 1.0,
+    frequency_penalty: 0.0,
+    presence_penalty: 0.0
+  };
+
   function LogDebug(text) {
     loggerText.value += (text + '\n');
     loggerText.scrollTop = loggerText.scrollHeight;
@@ -58,15 +70,9 @@
       what.innerHTML = 'Hide Log';
   }
 
-  function cleanText(text, chs) {
-    text = decodeURIComponent(text);
-    text = text.split('\n');
-    while (text.length && chs.indexOf(text[0]) >= 0)
-      text = text.slice(1); //remove leading newlines
-    while (text.length && chs.indexOf(text[text.length - 1]) >= 0)
-      text.pop();   // remove trailing new lines
-    return text.join('\n');
-  }
+function cleanText(text) {
+  return decodeURIComponent(text).trim();
+}
 
   function keydown(key) {
     if (key.keyCode === 13)
@@ -79,6 +85,26 @@
   }
 
   function OnLoad() {
+
+    // BrowserDetail.userAgent = navigator.userAgent;
+
+    if ((navigator.userAgent.indexOf("Opera") || navigator.userAgent.indexOf('OPR')) != -1)
+      BrowserDetail.type = 'Opera';
+    else if (navigator.userAgent.indexOf("Edg") != -1)
+      BrowserDetail.type = 'Edge';
+    else if (navigator.userAgent.indexOf("Chrome") != -1)
+      BrowserDetail.type = 'Chrome';
+    else if (navigator.userAgent.indexOf("Safari") != -1)
+      BrowserDetail.type = 'Safari';
+    else if (navigator.userAgent.indexOf("Firefox") != -1)
+      BrowserDetail.type = 'Firefox';
+    else if ((navigator.userAgent.indexOf("MSIE") != -1) || (!!document.documentMode == true)) //IF IE > 10
+      BrowserDetail.type = 'IE';
+    else
+      BrowserDetail.type = 'unknown';
+
+    LogDebug(`browser: ${BrowserDetail.type}`);
+
     if (!('webkitSpeechRecognition' in window)) {
       lblSpeak.style.display = 'none';
       LogDebug('speech to text not supported');
@@ -86,7 +112,7 @@
       LogDebug('speech to text is supported');
     }
 
-    if ('speechSynthesis' in window) {
+    if ('speechSynthesis' in window && BrowserDetail.type !== 'Safari') {
       LogDebug('text to speech is supported');
       bTextToSpeechSupported = true;
       tivl = setInterval(() => {
@@ -100,7 +126,13 @@
       }, 1000);    // one second after page loads
     } else {
       LogDebug('text to speech not supported');
+      chkMute.checked = true;
     }
+  }
+
+  function tempSlide(it) {
+    tempSliderValue.innerText = it.value;
+    ChatDialog.temperature = it.value;
   }
 
   function ChangeLang(o) {
@@ -110,7 +142,7 @@
   }
 
   function Send() {
-    const question = cleanText(theQuestion.value, '\n ');
+    const question = cleanText(theQuestion.value);
     if (question === '') {
       alert('Enter a question');
       theQuestion.value = '';
@@ -121,17 +153,17 @@
     LogDebug(`Asking: ${question}`);
 
     const oHttp = new XMLHttpRequest();
-    oHttp.open('GET', `https://zality.com/chat?ask=${question}`);
+    // oHttp.open('GET', `https://zality.com/chat?ask=${question}`);
+    oHttp.open('POST', 'http://localhost:8080/chat');
     oHttp.setRequestHeader('Accept', 'application/json');
 
     oHttp.onerror = function (err) {
-      return LogDebug(stringify(err));
+      LogDebug(stringify(err));
+      addResponseText(cleanText(stringify(err)));
     }
 
     oHttp.onreadystatechange = function () {
       if (oHttp.readyState === 4) {
-        LogDebug(`state: ${oHttp.readyState}`);
-
         let response = oHttp.responseText;
         if (selLang.value !== 'en-US') {
           const a = response.split('?\n');
@@ -140,7 +172,7 @@
           }
         }
 
-        response = cleanText(response, '\n ');
+        response = cleanText(response);
         if (response === '')
           response = 'No response';
         TextToSpeech(response);
@@ -148,7 +180,8 @@
       }
     }
 
-    oHttp.send();
+    ChatDialog.prompt = question;
+    oHttp.send(stringify(ChatDialog));
 
     addResponseText(`Me: ${question}\n`);
     theQuestion.value = '';
@@ -162,20 +195,21 @@
     try {
       oSpeechSynthesisUtterance = new SpeechSynthesisUtterance();
 
-      const sVoice = selVoices.value;
-      if (oVoices.length && sVoice && sVoice !== '')
-        oSpeechSynthesisUtterance.voice = oVoices[parseInt(sVoice)];
-      else
+      let sVoice = selVoices.value;
+      if (!(oVoices.length && sVoice && sVoice !== ''))
         return LogDebug('no voice to use');
 
+      sVoice = parseInt(sVoice);
+      oSpeechSynthesisUtterance.voice = oVoices[sVoice];
+
       oSpeechSynthesisUtterance.onend = function () {
-        if (oSpeechRecognizer && chkSpeak.checked) {
+        if (oSpeechRecognizer && chkListen.checked) {
           LogDebug('finished talking - can now listen');
           oSpeechRecognizer.start();
         }
       }
 
-      if (oSpeechRecognizer && chkSpeak.checked) {
+      if (oSpeechRecognizer && chkListen.checked) {
         LogDebug('do not listen to yourself when talking');
         oSpeechRecognizer.stop();
       }
@@ -183,7 +217,7 @@
       oSpeechSynthesisUtterance.lang = selLang.value;
       oSpeechSynthesisUtterance.text = text;
       window.speechSynthesis.speak(oSpeechSynthesisUtterance);
-      LogDebug(`Speaking ${text} in voice ${sVoice}`);
+      LogDebug(`Speaking ${text} in voice ${oVoices[sVoice].name}`);
     } catch (err) {
       LogDebug(`speaking error: ${err.message}`);
     }
@@ -199,7 +233,7 @@
   function SpeechToText() {
 
     if (oSpeechRecognizer) {
-      if (chkSpeak.checked)
+      if (chkListen.checked)
         oSpeechRecognizer.start();
       else
         oSpeechRecognizer.stop();
@@ -275,14 +309,8 @@
               placeholder="Input Text"></textarea>
 
     <p style="offset: 20px">
-        <label id="lblSpeak"><input id="chkSpeak" type="checkbox" onclick="SpeechToText()"/>Listen</label>
+        <label id="lblSpeak"><input id="chkListen" type="checkbox" onclick="SpeechToText()"/>Listen</label>
         <label id="lblMute"><input id="chkMute" type="checkbox" onclick="Mute(this.checked)"/>Mute</label>
-
-        <select id="selModel">
-            <option value="text-davinci-003">text-davinci-003</option>
-            <option value="text-davinci-002">text-davinci-002</option>
-            <option value="code-davinci-002">code-davinci-002</option>
-        </select>
 
         <select id="selLang" onchange="ChangeLang(this)">
             <option value="en-US">English (United States)</option>
@@ -297,6 +325,13 @@
         </select>
 
         <select id="selVoices"></select>
+        <br>
+        Temperature: <span id="tempSliderValue">0</span><input type="range" id="tempSlider"
+                                                               min="0"
+                                                               max="1"
+                                                               value="0"
+                                                               step="0.1"
+                                                               oninput="tempSlide(this)"/>
     </p>
 
     <br>

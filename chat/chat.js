@@ -2,7 +2,6 @@ const fs = require('fs');
 const readline = require('readline');
 const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
 const Url = require('url');
 const stringify = require('json-stringify-safe');
 
@@ -10,10 +9,53 @@ const nx = require('@zality/nodejs/util');
 const env = nx.getEnv('chatgpt', true);
 
 
+function cleanText(text) {
+  return decodeURIComponent(text).trim();
+}
+
 function Chat(question, dialog, config, cb) {
 
-  let response = '';
-  cb = cb ? cb : function() {};
+  cb = cb ? cb : function () {
+  };
+
+// convert question into an object
+
+  let query = {};
+  dialog = dialog ? dialog : {};
+
+  try {
+
+    if (question.charAt(0) === '{')
+      query = JSON.parse(question);
+    else
+      query = {prompt: question};
+
+    if (nx.isString(query.temperature))
+      query.temperature = parseFloat(query.temperature);
+    if (nx.isString(query.max_tokens))
+      query.max_tokens = parseInt(query.max_tokens);
+    if (nx.isString(query.top_p))
+      query.top_p = parseFloat(query.top_p);
+    if (nx.isString(query.frequency_penalty))
+      query.frequency_penalty = parseFloat(query.frequency_penalty);
+    if (nx.isString(query.presence_penalty))
+      query.presence_penalty = parseFloat(query.presence_penalty);
+  } catch (err) {
+    query = {prompt: question};
+  }
+
+  const _dialog = {   // default values
+    model: 'text-davinci-003',
+    temperature: 0,
+    max_tokens: 1000,
+    top_p: 1.0,
+    frequency_penalty: 0.0,
+    presence_penalty: 0.0,
+    stop: ['"""']
+  };
+
+  dialog = {..._dialog, ...dialog};
+  dialog = {...dialog, ...query};
 
   try {
     const _config = {
@@ -32,20 +74,6 @@ function Chat(question, dialog, config, cb) {
     config = config ? config : {};
     config = {..._config, ...config};
 
-    const _dialog = {
-      model: 'text-davinci-003',
-      temperature: 0,
-      max_tokens: 1000,
-      top_p: 1.0,
-      frequency_penalty: 0.0,
-      presence_penalty: 0.0,
-      stop: ['"""']
-    };
-
-    dialog = dialog ? dialog : {};
-    dialog = {..._dialog, ...dialog};
-    dialog.prompt = question;
-
     const protocol = require(config.type);
     const req = protocol.request(config, (res) => {
       res.setEncoding('utf8');
@@ -55,6 +83,7 @@ function Chat(question, dialog, config, cb) {
         body += chunk;
       });
 
+      let response = '';
       res.on('end', () => {
         try {
           response = JSON.parse(body);
@@ -115,15 +144,16 @@ function StartWebService(argv) {
   const url = Url.parse(argv);
 
   const app = express();
-  app.use(bodyParser.json());
+  app.use(express.json());
   app.use(cors())
   app.get(`${url.path}*`, (req, res) => {
+
     try {
       let query = req.url.slice(url.path.length);
       if (query.charAt(0) === '?' || query.charAt(0) === '&') {
         query = query.slice(Math.max(1, query.indexOf('=') + 1));
       }
-      console.log(`${query}\n`);
+      console.log(`${cleanText(query)}\n`);
       Chat(query, env.dialog, env.protocol_config, function (err, response) {
         console.log(`${response}\n`);
         res.send(response);

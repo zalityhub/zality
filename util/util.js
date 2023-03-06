@@ -414,7 +414,7 @@ nx.fileExists = function (path) {
 
 
 nx.getBody = function (req, cb) {
-  cb = cb || funcion(){};
+  cb = cb ? cb : function() {};
   try {
     const body = [];
     req.on('data', (chunk) => {
@@ -432,7 +432,7 @@ nx.getBody = function (req, cb) {
 
 
 nx.fsIterate = function (dir, cb) {
-  cb = cb || funcion(){};
+  cb = cb ? cb : function() {};
   fs.readdir(dir, function (err, objects) {
     if (err) {
       nx.logError(`Could not list ${objects}`, err);
@@ -641,7 +641,7 @@ nx.putAscii = function (string) {
 }
 
 nx.puts = function (string, cb) {
-  cb = cb || funcion(){};
+  cb = cb ? cb : function() {};
   string = string ? string : '';
   return fs.write(1, string.toString(), cb);
 }
