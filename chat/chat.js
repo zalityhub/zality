@@ -13,7 +13,7 @@ const env = nx.getEnv('chatgpt', true);
 function Chat(question, dialog, config, cb) {
 
   let response = '';
-  cb = cb || funcion(){};
+  cb = cb ? cb : function() {};
 
   try {
     const _config = {
