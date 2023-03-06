@@ -12,7 +12,228 @@
 
 <body class="fade_in" onload="OnLoad()">
 
-<script src="chat.js"></script>
+<script>
+  function stringify(obj, replacer, spaces, cycleReplacer) {
+    return JSON.stringify(obj, serializer(replacer, cycleReplacer), spaces)
+  }
+
+  function serializer(replacer, cycleReplacer) {
+    var stack = [], keys = []
+
+    if (cycleReplacer == null) cycleReplacer = function (key, value) {
+      if (stack[0] === value) return "[Circular ~]"
+      return "[Circular ~." + keys.slice(0, stack.indexOf(value)).join(".") + "]"
+    }
+
+    return function (key, value) {
+      if (stack.length > 0) {
+        var thisPos = stack.indexOf(this)
+        ~thisPos ? stack.splice(thisPos + 1) : stack.push(this)
+        ~thisPos ? keys.splice(thisPos, Infinity, key) : keys.push(key)
+        if (~stack.indexOf(value)) value = cycleReplacer.call(this, key, value)
+      } else stack.push(value)
+
+      return replacer == null ? value : replacer.call(this, key, value)
+    }
+  }
+</script>
+
+<script>
+  let bTextToSpeechSupported = false;
+  let bSpeechInProgress = false;
+  let oSpeechRecognizer = null
+  let oSpeechSynthesisUtterance = null;
+  let oVoices = [];
+  let tivl;
+
+  function LogDebug(text) {
+    loggerText.value += (text + '\n');
+    loggerText.scrollTop = loggerText.scrollHeight;
+  }
+
+  function collapsibleObserver(what) {
+    if (what.innerHTML.indexOf('Hide') >= 0)
+      what.innerHTML = 'Show Log';
+    else
+      what.innerHTML = 'Hide Log';
+  }
+
+  function cleanText(text, chs) {
+    text = decodeURIComponent(text);
+    text = text.split('\n');
+    while (text.length && chs.indexOf(text[0]) >= 0)
+      text = text.slice(1); //remove leading newlines
+    while (text.length && chs.indexOf(text[text.length - 1]) >= 0)
+      text.pop();   // remove trailing new lines
+    return text.join('\n');
+  }
+
+  function keydown(key) {
+    if (key.keyCode === 13)
+      Send();
+  }
+
+  function addResponseText(text) {
+    txtOutput.value += text;
+    txtOutput.scrollTop = txtOutput.scrollHeight;
+  }
+
+  function OnLoad() {
+    if (!('webkitSpeechRecognition' in window)) {
+      lblSpeak.style.display = 'none';
+      LogDebug('speech to text not supported');
+    } else {
+      LogDebug('speech to text is supported');
+    }
+
+    if ('speechSynthesis' in window) {
+      LogDebug('text to speech is supported');
+      bTextToSpeechSupported = true;
+      tivl = setInterval(() => {
+        oVoices = window.speechSynthesis.getVoices();
+        if (oVoices.length) {
+          clearInterval(tivl);
+          for (let i = 0; i < oVoices.length; i++)
+            selVoices[selVoices.length] = new Option(oVoices[i].name, i);
+          LogDebug(`loaded ${oVoices.length} voices`);
+        }
+      }, 1000);    // one second after page loads
+    } else {
+      LogDebug('text to speech not supported');
+    }
+  }
+
+  function ChangeLang(o) {
+    if (oSpeechRecognizer) {
+      oSpeechRecognizer.lang = selLang.value;
+    }
+  }
+
+  function Send() {
+    const question = cleanText(theQuestion.value, '\n ');
+    if (question === '') {
+      alert('Enter a question');
+      theQuestion.value = '';
+      theQuestion.focus();
+      return;
+    }
+
+    LogDebug(`Asking: ${question}`);
+
+    const oHttp = new XMLHttpRequest();
+    oHttp.open('GET', `https://zality.com/chat?ask=${question}`);
+    oHttp.setRequestHeader('Accept', 'application/json');
+
+    oHttp.onerror = function (err) {
+      return LogDebug(stringify(err));
+    }
+
+    oHttp.onreadystatechange = function () {
+      if (oHttp.readyState === 4) {
+        LogDebug(`state: ${oHttp.readyState}`);
+
+        let response = oHttp.responseText;
+        if (selLang.value !== 'en-US') {
+          const a = response.split('?\n');
+          if (a.length === 2) {
+            response = a[1];
+          }
+        }
+
+        response = cleanText(response, '\n ');
+        if (response === '')
+          response = 'No response';
+        TextToSpeech(response);
+        addResponseText(`Chat GPT: ${response}\n\n`);
+      }
+    }
+
+    oHttp.send();
+
+    addResponseText(`Me: ${question}\n`);
+    theQuestion.value = '';
+    theQuestion.focus();
+  }
+
+  function TextToSpeech(text) {
+    if (!text || !bTextToSpeechSupported || chkMute.checked)
+      return;
+
+    try {
+      oSpeechSynthesisUtterance = new SpeechSynthesisUtterance();
+
+      const sVoice = selVoices.value;
+      if (oVoices.length && sVoice && sVoice !== '')
+        oSpeechSynthesisUtterance.voice = oVoices[parseInt(sVoice)];
+      else
+        return LogDebug('no voice to use');
+
+      oSpeechSynthesisUtterance.onend = function () {
+        if (oSpeechRecognizer && chkSpeak.checked) {
+          LogDebug('finished talking - can now listen');
+          oSpeechRecognizer.start();
+        }
+      }
+
+      if (oSpeechRecognizer && chkSpeak.checked) {
+        LogDebug('do not listen to yourself when talking');
+        oSpeechRecognizer.stop();
+      }
+
+      oSpeechSynthesisUtterance.lang = selLang.value;
+      oSpeechSynthesisUtterance.text = text;
+      window.speechSynthesis.speak(oSpeechSynthesisUtterance);
+      LogDebug(`Speaking ${text} in voice ${sVoice}`);
+    } catch (err) {
+      LogDebug(`speaking error: ${err.message}`);
+    }
+  }
+
+  function Mute(b) {
+    if (b)
+      selVoices.style.display = 'none';
+    else
+      selVoices.style.display = '';
+  }
+
+  function SpeechToText() {
+
+    if (oSpeechRecognizer) {
+      if (chkSpeak.checked)
+        oSpeechRecognizer.start();
+      else
+        oSpeechRecognizer.stop();
+      return;
+    }
+
+    oSpeechRecognizer = new webkitSpeechRecognition();
+    oSpeechRecognizer.continuous = true;
+    oSpeechRecognizer.interimResults = true;
+    oSpeechRecognizer.lang = selLang.value;
+    oSpeechRecognizer.start();
+
+    oSpeechRecognizer.onresult = function (event) {
+      let interimTranscripts = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+
+        if (event.results[i].isFinal) {
+          theQuestion.value = transcript;
+          Send();
+        } else {
+          transcript.replace('\n', '<br>');
+          interimTranscripts += transcript;
+        }
+
+        const oDiv = document.getElementById('idText');
+        oDiv.innerHTML = '<span style="color: #999;">' + interimTranscripts + '</span>';
+      }
+    }
+
+    oSpeechRecognizer.onerror = function (event) {
+    }
+  }
+</script>
 
 <div class="social_links">
     <span><a href="https://www.twitter.com/chatspeak"><i class="fab fa-twitter"></i></a></span>
@@ -54,7 +275,6 @@
               placeholder="Input Text"></textarea>
 
     <p style="offset: 20px">
-        <button type="button" onclick="Send()" id="btnSend">Send</button>
         <label id="lblSpeak"><input id="chkSpeak" type="checkbox" onclick="SpeechToText()"/>Listen</label>
         <label id="lblMute"><input id="chkMute" type="checkbox" onclick="Mute(this.checked)"/>Mute</label>
 
@@ -80,8 +300,8 @@
     </p>
 
     <br>
-    <button type="button" class="collapsible">Open Log</button>
-    <div class="ccontent">
+    <button type="button" class="collapsible">Show Log</button>
+    <div class="ccontent" style="display: none;">
         <p>
         <textarea id="loggerText" rows="5" wrap="soft"
                   style="width: 98%; margin-left: 3px; margin-top: 6px"></textarea>
@@ -89,21 +309,7 @@
     </div>
 </div>
 
-<script>
+<script src="public/javascript/collapsible.js"></script>
 
-  const coll = document.getElementsByClassName("collapsible");
-
-  for (let i = 0; i < coll.length; ++i) {
-    coll[i].addEventListener("click", function () {
-      this.classList.toggle("active");
-      const content = this.nextElementSibling;
-      if (content.style.display === "block") {
-        content.style.display = "none";
-      } else {
-        content.style.display = "block";
-      }
-    });
-  }
-</script>
 </body>
 </html>

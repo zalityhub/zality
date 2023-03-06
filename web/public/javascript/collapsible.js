@@ -1,7 +1,7 @@
-const coll = document.getElementsByClassName("collapsible");
+let coll = document.getElementsByClassName("collapsible");
 
 for (let i = 0; i < coll.length; ++i) {
-  coll[i].addEventListener("click", function () {
+  function click() {
     this.classList.toggle("active");
     const content = this.nextElementSibling;
     if (content.style.display === "block") {
@@ -9,5 +9,8 @@ for (let i = 0; i < coll.length; ++i) {
     } else {
       content.style.display = "block";
     }
-  });
+    if(collapsibleObserver)
+      collapsibleObserver(this);
+  }
+  coll[i].addEventListener("click", click);
 }
