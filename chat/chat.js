@@ -15,8 +15,7 @@ function cleanText(text) {
 
 function Chat(question, dialog, config, cb) {
 
-  cb = cb ? cb : function () {
-  };
+  cb = cb ? cb : function () {  };
 
 // convert question into an object
 
@@ -46,6 +45,7 @@ function Chat(question, dialog, config, cb) {
 
   const _dialog = {   // default values
     model: 'text-davinci-003',
+    n: 5,
     temperature: 0,
     max_tokens: 1000,
     top_p: 1.0,
@@ -83,11 +83,19 @@ function Chat(question, dialog, config, cb) {
         body += chunk;
       });
 
-      let response = '';
       res.on('end', () => {
         try {
-          response = JSON.parse(body);
-          response = response.choices[0].text.toString();
+          const json = JSON.parse(body);
+          let response = json;
+          if (response.error)
+            response = response.error;
+          if (response.message)
+            response = response.message.toString();
+          if (response.choices)
+            response = response.choices;
+          if (nx.isArray(response) && response.length && response[0].text)
+            response = response[0].text;
+          response = response.toString();
           cb(null, response);
         } catch (err) {
           cb(null, body);

@@ -70,9 +70,9 @@
       what.innerHTML = 'Hide Log';
   }
 
-function cleanText(text) {
-  return decodeURIComponent(text).trim();
-}
+  function cleanText(text) {
+    return decodeURIComponent(text).trim();
+  }
 
   function keydown(key) {
     if (key.keyCode === 13)
@@ -119,8 +119,12 @@ function cleanText(text) {
         oVoices = window.speechSynthesis.getVoices();
         if (oVoices.length) {
           clearInterval(tivl);
-          for (let i = 0; i < oVoices.length; i++)
-            selVoices[selVoices.length] = new Option(oVoices[i].name, i);
+          for (let i = 0; i < oVoices.length; i++) {
+            const name = oVoices[i].name;
+            selVoices[selVoices.length] = new Option(name, i);
+            if (name.indexOf('Microsoft Mark') >= 0)
+              selVoices.value = i;
+          }
           LogDebug(`loaded ${oVoices.length} voices`);
         }
       }, 1000);    // one second after page loads
@@ -133,6 +137,11 @@ function cleanText(text) {
   function tempSlide(it) {
     tempSliderValue.innerText = it.value;
     ChatDialog.temperature = it.value;
+  }
+
+  function vocabSlide(it) {
+    vocabSliderValue.innerText = it.value;
+    ChatDialog.top_p = it.value;
   }
 
   function ChangeLang(o) {
@@ -153,7 +162,7 @@ function cleanText(text) {
     LogDebug(`Asking: ${question}`);
 
     const oHttp = new XMLHttpRequest();
-    // oHttp.open('GET', `https://zality.com/chat?ask=${question}`);
+    // oHttp.open('POST', `https://zality.com/chat`);
     oHttp.open('POST', 'http://localhost:8080/chat');
     oHttp.setRequestHeader('Accept', 'application/json');
 
@@ -328,10 +337,16 @@ function cleanText(text) {
         <br>
         Temperature: <span id="tempSliderValue">0</span><input type="range" id="tempSlider"
                                                                min="0"
-                                                               max="1"
+                                                               max="2"
                                                                value="0"
                                                                step="0.1"
                                                                oninput="tempSlide(this)"/>
+        Vocabulary: <span id="vocabSliderValue">1</span><input type="range" id="vocabSlider"
+                                                               min="0"
+                                                               max="1"
+                                                               value="1"
+                                                               step="0.1"
+                                                               oninput="vocabSlide(this)"/>
     </p>
 
     <br>
