@@ -74,9 +74,31 @@
     return decodeURIComponent(text).trim();
   }
 
+  function gptText(gptResponse) {
+    try {
+      let response = JSON.parse(gptResponse);
+      if (response.error)
+        response = response.error;
+      if (response.message)
+        response = response.message.toString();
+      if (response.choices)
+        response = response.choices;
+      if (response instanceof Array) {
+        let text = '';
+        for (let i = 0, ilen = response.length; i < ilen; ++i)
+          if (response[i].text)
+            text += response[i].text;
+        response = text;
+      }
+      return response.toString();
+    } catch (err) {
+      return stringify(gptResponse);
+    }
+  }
+
   function keydown(key) {
     if (key.keyCode === 13)
-      Send();
+      SendChatReq();
   }
 
   function addResponseText(text) {
@@ -150,7 +172,7 @@
     }
   }
 
-  function Send() {
+  function SendChatReq() {
     const question = cleanText(theQuestion.value);
     if (question === '') {
       alert('Enter a question');
@@ -173,15 +195,8 @@
 
     oHttp.onreadystatechange = function () {
       if (oHttp.readyState === 4) {
-        let response = oHttp.responseText;
-        if (selLang.value !== 'en-US') {
-          const a = response.split('?\n');
-          if (a.length === 2) {
-            response = a[1];
-          }
-        }
-
-        response = cleanText(response);
+        const gptResponse = oHttp.responseText;
+        let response = cleanText(gptText(gptResponse));
         if (response === '')
           response = 'No response';
         TextToSpeech(response);
@@ -262,7 +277,7 @@
 
         if (event.results[i].isFinal) {
           theQuestion.value = transcript;
-          Send();
+          SendChatReq();
         } else {
           transcript.replace('\n', '<br>');
           interimTranscripts += transcript;
@@ -341,12 +356,14 @@
                                                                value="0"
                                                                step="0.1"
                                                                oninput="tempSlide(this)"/>
-        Vocabulary: <span id="vocabSliderValue">1</span><input type="range" id="vocabSlider"
-                                                               min="0"
-                                                               max="1"
-                                                               value="1"
-                                                               step="0.1"
-                                                               oninput="vocabSlide(this)"/>
+        <!--
+                Vocabulary: <span id="vocabSliderValue">1</span><input type="range" id="vocabSlider"
+                                                                       min="0"
+                                                                       max="1"
+                                                                       value="1"
+                                                                       step="0.1"
+                                                                       oninput="vocabSlide(this)"/>
+        -->
     </p>
 
     <br>

@@ -13,9 +13,45 @@ function cleanText(text) {
   return decodeURIComponent(text).trim();
 }
 
-function Chat(question, dialog, config, cb) {
 
-  cb = cb ? cb : function () {  };
+function GptText(gptResponse) {
+  const result = {};
+
+  try {
+    result.gpt = JSON.parse(gptResponse);
+  } catch (err) {
+    result.gpt = gptResponse;
+    result.text = stringify(gptResponse);
+    return result;
+  }
+
+  try {
+    let response = result.gpt;
+    if (response.error)
+      response = response.error;
+    if (response.message)
+      response = response.message.toString();
+    if (response.choices)
+      response = response.choices;
+    if (nx.isArray(response)) {
+      let text = '';
+      for (let i = 0, ilen = response.length; i < ilen; ++i)
+        if (response[i].text)
+          text += response[i].text;
+      response = text;
+    }
+    result.text = response.toString();
+    return result;
+  } catch (err) {
+    result.text = stringify(gptResponse);
+    return result;
+  }
+}
+
+function SendChatReq(question, dialog, config, cb) {
+
+  cb = cb ? cb : function () {
+  };
 
 // convert question into an object
 
@@ -23,8 +59,9 @@ function Chat(question, dialog, config, cb) {
   dialog = dialog ? dialog : {};
 
   try {
-
-    if (question.charAt(0) === '{')
+    if (question.constructor === Object)
+      query = question;
+    else if (question.charAt(0) === '{')
       query = JSON.parse(question);
     else
       query = {prompt: question};
@@ -45,7 +82,6 @@ function Chat(question, dialog, config, cb) {
 
   const _dialog = {   // default values
     model: 'text-davinci-003',
-    n: 5,
     temperature: 0,
     max_tokens: 1000,
     top_p: 1.0,
@@ -84,22 +120,7 @@ function Chat(question, dialog, config, cb) {
       });
 
       res.on('end', () => {
-        try {
-          const json = JSON.parse(body);
-          let response = json;
-          if (response.error)
-            response = response.error;
-          if (response.message)
-            response = response.message.toString();
-          if (response.choices)
-            response = response.choices;
-          if (nx.isArray(response) && response.length && response[0].text)
-            response = response[0].text;
-          response = response.toString();
-          cb(null, response);
-        } catch (err) {
-          cb(null, body);
-        }
+        cb(null, body);
       });
     });
 
@@ -116,34 +137,7 @@ function Chat(question, dialog, config, cb) {
 }
 
 
-function Ask(question, url) {
-  if (url && url.length > 0) {
-    const http = require('http');
-    if (url.indexOf('http') !== 0)
-      url = `http://${url}`
-    http.get(`${url}/?${question}`, res => {
-      let response = ''
-
-      res.on('data', chunk => {
-        response += chunk
-      })
-
-      res.on('end', () => {
-        console.log(`${response}\n`);
-      })
-    })
-    return;
-  }
-
-  Chat(question, env.dialog, env.protocol_config, function (err, response) {
-    console.log(`${response}\n`);
-  });
-}
-
-
 function StartWebService(argv) {
-
-// 'http://localhost:8080/chat'
 
   argv = argv.join('');
   if (argv.length <= 0)
@@ -155,15 +149,14 @@ function StartWebService(argv) {
   app.use(express.json());
   app.use(cors())
   app.get(`${url.path}*`, (req, res) => {
-
     try {
       let query = req.url.slice(url.path.length);
       if (query.charAt(0) === '?' || query.charAt(0) === '&') {
         query = query.slice(Math.max(1, query.indexOf('=') + 1));
       }
       console.log(`${cleanText(query)}\n`);
-      Chat(query, env.dialog, env.protocol_config, function (err, response) {
-        console.log(`${response}\n`);
+      SendChatReq(query, env.dialog, env.protocol_config, function (err, response) {
+        console.log(`${GptText(response).text}\n`);
         res.send(response);
       });
     } catch (err) {
@@ -180,8 +173,8 @@ function StartWebService(argv) {
 
     req.on('end', function () {
       console.log(`${query}\n`);
-      Chat(query, env.dialog, env.protocol_config, function (err, response) {
-        console.log(`${response}\n`);
+      SendChatReq(query, env.dialog, env.protocol_config, function (err, response) {
+        console.log(`${GptText(response).text}\n`);
         res.send(response);
       });
     });
@@ -193,14 +186,37 @@ function StartWebService(argv) {
 }
 
 
-function quizLoop(url) {
-  if (!url)
-    url = [];
-  url = url.join('').toString();
-  readline.createInterface(process.stdin, process.stdout).on('line', (question) => {
+function Ask(question, cb) {
+  cb = cb ? cb : function () {
+  };
+
+  SendChatReq(question, env.dialog, env.protocol_config, function (err, response) {
+    if (err)
+      return cb(err);
+
+    cb(null, response);
+  });
+}
+
+
+function quizLoop() {
+  let parentMessageId;
+
+  const rl = readline.createInterface(process.stdin, process.stdout);
+  rl.on('line', (question) => {
     if (question.length <= 0)
       process.exit(0);
-    Ask(question, url);
+
+    const query = {prompt: question};
+    if (parentMessageId)
+      query.parent_message_id = parentMessageId;
+    Ask(query, function (err, response) {
+      if (err)
+        return console.error(err.toString());
+      response = GptText(response);
+      parentMessageId = response.gpt.id;
+      console.log(`${response.text}\n`);
+    });
   });
 }
 
@@ -210,13 +226,17 @@ const argv = process.argv.slice(2);
 if (argv.length) {
   switch (argv[0]) {
     default:
-      Ask(argv.join(' ').toString());
-      break;
-    case '-w':
-      StartWebService(argv.slice(1));
+      Ask(question, function (err, response) {
+        if (err)
+          return console.error(err.toString());
+        console.log(`${GptText(response).text}\n`);
+      });
       break;
     case '-s':
       quizLoop(argv.slice(1));
+      break;
+    case '-w':
+      StartWebService(argv.slice(1));
       break;
   }
 } else {
