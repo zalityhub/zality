@@ -143,7 +143,7 @@ function MakeChatReq(question, dialog, config, cb) {
       res.on('end', () => {
         const gptResponse = MakeGptResponse(body);
         if (config.debug)
-          console.log(`response: ${stringify(gptResponse.json.obj)}\n\n`);
+          console.log(`response: ${stringify(gptResponse.json.obj)}`);
         cb(null, {request: gptRequest, response: gptResponse});
       });
     });
@@ -238,24 +238,30 @@ function quizLoop() {
 }
 
 
-const argv = process.argv.slice(2);
+let argv = process.argv.slice(2);
 
 if (argv.length) {
-  switch (argv[0]) {
-    default:
-      Ask(argv.join(' '), function (err, result) {
-        if (err)
-          return console.error(err.toString());
-        console.log(`${result.response.text}\n`);
-      });
-      break;
-    case '-s':
-      quizLoop(argv.slice(1));
-      break;
-    case '-w':
-      StartWebService(argv.slice(1));
-      break;
+  while (argv.length) {
+    switch (argv[0]) {
+      default:
+        return Ask(argv.join(' '), function (err, result) {
+          if (err)
+            return console.error(err.toString());
+          console.log(`${result.response.text}\n`);
+        });
+        break;
+      case '-d':
+        env.protocol_config.debug = true;
+        break;
+      case '-l':
+        return quizLoop(argv.slice(1));
+        break;
+      case '-w':
+        return StartWebService(argv.slice(1));
+        break;
+    }
+    argv = argv.slice(1);   // next arg
   }
 } else {
-  quizLoop();
+  return quizLoop();
 }
