@@ -20,7 +20,7 @@ function GptText(gptResponse) {
   try {
     result.gpt = JSON.parse(gptResponse);
   } catch (err) {
-    result.gpt = gptResponse;
+    result.gpt = {raw: gptResponse};
     result.text = stringify(gptResponse);
     return result;
   }
@@ -53,11 +53,12 @@ function SendChatReq(question, dialog, config, cb) {
   cb = cb ? cb : function () {
   };
 
-// convert question into an object
+  dialog = dialog ? dialog : {};
+  config = config ? config : {};
+
+// convert question into a query object
 
   let query = {};
-  dialog = dialog ? dialog : {};
-
   try {
     if (question.constructor === Object)
       query = question;
@@ -89,27 +90,28 @@ function SendChatReq(question, dialog, config, cb) {
     presence_penalty: 0.0,
     stop: ['"""']
   };
-
   dialog = {..._dialog, ...dialog};
   dialog = {...dialog, ...query};
 
-  try {
-    const _config = {
-      type: 'https',
-      hostname: 'api.openai.com',
-      port: 443,
-      path: '/v1/completions',
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer YOUR_API_KEY_HERE'
-      }
+  const _config = {
+    type: 'https',
+    hostname: 'api.openai.com',
+    port: 443,
+    path: '/v1/completions',
+    method: 'POST',
+    debug: false,
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer YOUR_API_KEY_HERE'
     }
+  }
+  config = {..._config, ...config};
 
-    config = config ? config : {};
-    config = {..._config, ...config};
+  if (config.debug)
+    console.log(`query: ${stringify(dialog)}`);
 
+  try {
     const protocol = require(config.type);
     const req = protocol.request(config, (res) => {
       res.setEncoding('utf8');
@@ -120,11 +122,14 @@ function SendChatReq(question, dialog, config, cb) {
       });
 
       res.on('end', () => {
+        if (config.debug)
+          console.log(`response: ${stringify(GptText(body).gpt)}\n\n`);
         cb(null, body);
       });
     });
 
     req.on('error', (err) => {
+      console.error(err.toString());
       cb(err);
     });
 
@@ -132,6 +137,7 @@ function SendChatReq(question, dialog, config, cb) {
     req.write(JSON.stringify(dialog));
     req.end();
   } catch (err) {
+    console.error(err.toString());
     cb(err);
   }
 }
@@ -154,9 +160,7 @@ function StartWebService(argv) {
       if (query.charAt(0) === '?' || query.charAt(0) === '&') {
         query = query.slice(Math.max(1, query.indexOf('=') + 1));
       }
-      console.log(`${cleanText(query)}\n`);
       SendChatReq(query, env.dialog, env.protocol_config, function (err, response) {
-        console.log(`${GptText(response).text}\n`);
         res.send(response);
       });
     } catch (err) {
@@ -172,9 +176,7 @@ function StartWebService(argv) {
     });
 
     req.on('end', function () {
-      console.log(`${query}\n`);
       SendChatReq(query, env.dialog, env.protocol_config, function (err, response) {
-        console.log(`${GptText(response).text}\n`);
         res.send(response);
       });
     });
@@ -200,7 +202,6 @@ function Ask(question, cb) {
 
 
 function quizLoop() {
-  let parentMessageId;
 
   const rl = readline.createInterface(process.stdin, process.stdout);
   rl.on('line', (question) => {
@@ -208,13 +209,10 @@ function quizLoop() {
       process.exit(0);
 
     const query = {prompt: question};
-    if (parentMessageId)
-      query.parent_message_id = parentMessageId;
     Ask(query, function (err, response) {
       if (err)
         return console.error(err.toString());
       response = GptText(response);
-      parentMessageId = response.gpt.id;
       console.log(`${response.text}\n`);
     });
   });
@@ -226,7 +224,7 @@ const argv = process.argv.slice(2);
 if (argv.length) {
   switch (argv[0]) {
     default:
-      Ask(question, function (err, response) {
+      Ask(argv.join(' '), function (err, response) {
         if (err)
           return console.error(err.toString());
         console.log(`${GptText(response).text}\n`);

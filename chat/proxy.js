@@ -1,5 +1,6 @@
 const express = require('express');
 const stringify = require('json-stringify-safe');
+const Url = require('url');
 const nx = require('@zality/nodejs/util');
 
 const app = express();
@@ -9,24 +10,26 @@ const http = require('http');
 const env = nx.getEnv('chatgpt', true);
 
 const targetUrl = env.proxy.targetUrl;
-const proxyServerPort = env.proxy.proxyServerPort;
+const proxyServerUrl = env.proxy.proxyServerUrl;
 
-if (targetUrl === undefined || proxyServerPort === undefined) {
-  console.error('Cannot continue without targetUrl and proxyServerPort');
+if (targetUrl === undefined || proxyServerUrl === undefined) {
+  console.error('Cannot continue without targetUrl and proxyServerUrl');
   process.exit(1);
 }
 
 
 app.use('/', function (clientRequest, clientResponse) {
   function proxyReq(postBody) {
+    console.log(`req: ${postBody}`);
     const serverRequest = protocol.request(options, function (serverResponse) {
       let body = '';
-      if (String(serverResponse.headers['content-type']).indexOf('text/html') !== -1) {
+      if (true) { // String(serverResponse.headers['content-type']).indexOf('text/html') !== -1) {
         serverResponse.on('data', function (chunk) {
           body += chunk;
         });
 
         serverResponse.on('end', function () {
+          console.log(`rsp: ${body}`);
           clientResponse.writeHead(serverResponse.statusCode, serverResponse.headers);
           clientResponse.end(body);
         });
@@ -73,5 +76,6 @@ app.use('/', function (clientRequest, clientResponse) {
   });
 });
 
-app.listen(proxyServerPort);
-console.log(`Proxy server listening on port ${proxyServerPort} for ${targetUrl}`);
+const url = Url.parse(env.proxy.proxyServerUrl);
+app.listen(url.port, url.hostname);
+console.log(`Proxy server listening on port ${url.hostname} for ${targetUrl}`);
