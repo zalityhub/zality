@@ -10,45 +10,62 @@ const env = nx.getEnv('chatgpt', true);
 
 
 function cleanText(text) {
-  return decodeURIComponent(text).trim();
+  return decodeURIComponent(text.toString()).toString().trim();
 }
 
 
-function GptText(gptResponse) {
-  const result = {};
+function ParseGptPayload(payload) {
+  payload = payload ? payload : '';
 
+  const result = {text: payload, json: {raw: payload}};
   try {
-    result.gpt = JSON.parse(gptResponse);
-  } catch (err) {
-    result.gpt = {raw: gptResponse};
-    result.text = stringify(gptResponse);
-    return result;
-  }
-
-  try {
-    let response = result.gpt;
-    if (response.error)
-      response = response.error;
-    if (response.message)
-      response = response.message.toString();
-    if (response.choices)
-      response = response.choices;
-    if (nx.isArray(response)) {
-      let text = '';
-      for (let i = 0, ilen = response.length; i < ilen; ++i)
-        if (response[i].text)
-          text += response[i].text;
-      response = text;
+    if (payload.constructor === Object) {  // the Result is an object
+      result.json.obj = payload;
+      result.text = result.json.raw = stringify(payload);
+    } else { // otherwise, try to parse as json string
+      result.json.obj = JSON.parse(payload);
     }
-    result.text = response.toString();
-    return result;
   } catch (err) {
-    result.text = stringify(gptResponse);
-    return result;
+    result.json.error = err.toString();
+    console.error(result.json.error);
+    result.text = payload;
+    result.json.obj = result.json.raw = stringify(payload);
   }
+
+  return result;
 }
 
-function SendChatReq(question, dialog, config, cb) {
+function MakeGptResponse(gptResponse) {
+  gptResponse = gptResponse ? gptResponse : '';
+
+  const result = ParseGptPayload(gptResponse);
+
+  // rebuild the response text
+  let json = result.json.obj;
+  try {
+    let text = '';
+    if (json.error)
+      json = json.error;
+    if (json.message)
+      json = json.message.toString();
+    if (json.choices)
+      json = json.choices;
+    if (nx.isArray(json)) {
+      for (let i = 0, ilen = json.length; i < ilen; ++i)
+        if (json[i].text)
+          text += `${cleanText(json[i].text)}\n`;
+    } else
+      text = json.toString();
+    result.text = cleanText(text.toString());
+  } catch (err) {
+    result.text = cleanText(stringify(gptResponse));
+  }
+
+  return result;
+}
+
+
+function MakeChatReq(question, dialog, config, cb) {
 
   cb = cb ? cb : function () {
   };
@@ -108,8 +125,10 @@ function SendChatReq(question, dialog, config, cb) {
   }
   config = {..._config, ...config};
 
+  const gptRequest = ParseGptPayload(dialog);
+
   if (config.debug)
-    console.log(`query: ${stringify(dialog)}`);
+    console.log(`request: ${gptRequest.text}`);
 
   try {
     const protocol = require(config.type);
@@ -122,9 +141,10 @@ function SendChatReq(question, dialog, config, cb) {
       });
 
       res.on('end', () => {
+        const gptResponse = MakeGptResponse(body);
         if (config.debug)
-          console.log(`response: ${stringify(GptText(body).gpt)}\n\n`);
-        cb(null, body);
+          console.log(`response: ${stringify(gptResponse.json.obj)}\n\n`);
+        cb(null, {request: gptRequest, response: gptResponse});
       });
     });
 
@@ -134,7 +154,7 @@ function SendChatReq(question, dialog, config, cb) {
     });
 
 // write data to request body
-    req.write(JSON.stringify(dialog));
+    req.write(gptRequest.text);
     req.end();
   } catch (err) {
     console.error(err.toString());
@@ -160,8 +180,8 @@ function StartWebService(argv) {
       if (query.charAt(0) === '?' || query.charAt(0) === '&') {
         query = query.slice(Math.max(1, query.indexOf('=') + 1));
       }
-      SendChatReq(query, env.dialog, env.protocol_config, function (err, response) {
-        res.send(response);
+      MakeChatReq(query, env.dialog, env.protocol_config, function (err, result) {
+        res.send(result.response.text);
       });
     } catch (err) {
       res.end('Internal error');
@@ -176,8 +196,8 @@ function StartWebService(argv) {
     });
 
     req.on('end', function () {
-      SendChatReq(query, env.dialog, env.protocol_config, function (err, response) {
-        res.send(response);
+      MakeChatReq(query, env.dialog, env.protocol_config, function (err, result) {
+        res.send(result.response.text);
       });
     });
   });
@@ -192,11 +212,10 @@ function Ask(question, cb) {
   cb = cb ? cb : function () {
   };
 
-  SendChatReq(question, env.dialog, env.protocol_config, function (err, response) {
+  MakeChatReq(question, env.dialog, env.protocol_config, function (err, result) {
     if (err)
       return cb(err);
-
-    cb(null, response);
+    cb(null, result);
   });
 }
 
@@ -209,11 +228,11 @@ function quizLoop() {
       process.exit(0);
 
     const query = {prompt: question};
-    Ask(query, function (err, response) {
+    Ask(query, function (err, result) {
       if (err)
         return console.error(err.toString());
-      response = GptText(response);
-      console.log(`${response.text}\n`);
+      result = MakeGptRequest(result);
+      console.log(`${result.response.text}\n`);
     });
   });
 }
@@ -224,10 +243,10 @@ const argv = process.argv.slice(2);
 if (argv.length) {
   switch (argv[0]) {
     default:
-      Ask(argv.join(' '), function (err, response) {
+      Ask(argv.join(' '), function (err, result) {
         if (err)
           return console.error(err.toString());
-        console.log(`${GptText(response).text}\n`);
+        console.log(`${result.response.text}\n`);
       });
       break;
     case '-s':
