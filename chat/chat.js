@@ -1,6 +1,5 @@
-const fs = require('fs');
-const readline = require('readline');
 const express = require('express');
+const readline = require('readline');
 const cors = require('cors');
 const Url = require('url');
 const stringify = require('json-stringify-safe');
@@ -9,39 +8,11 @@ const nx = require('@zality/nodejs/util');
 const env = nx.getEnv('chatgpt', true);
 
 
-function cleanText(text) {
-  return decodeURIComponent(text.toString()).toString().trim();
-}
+function GetGptText(gptResponse) {
+  const response = {json: gptResponse};
 
-
-function ParseGptPayload(payload) {
-  payload = payload ? payload : '';
-
-  const result = {text: payload, json: {raw: payload}};
-  try {
-    if (payload.constructor === Object) {  // the Result is an object
-      result.json.obj = payload;
-      result.text = result.json.raw = stringify(payload);
-    } else { // otherwise, try to parse as json string
-      result.json.obj = JSON.parse(payload);
-    }
-  } catch (err) {
-    result.json.error = err.toString();
-    console.error(result.json.error);
-    result.text = payload;
-    result.json.obj = result.json.raw = stringify(payload);
-  }
-
-  return result;
-}
-
-function MakeGptResponse(gptResponse) {
-  gptResponse = gptResponse ? gptResponse : '';
-
-  const result = ParseGptPayload(gptResponse);
-
-  // rebuild the response text
-  let json = result.json.obj;
+  // extract the response text
+  let json = gptResponse;
   try {
     let text = '';
     if (json.error)
@@ -53,86 +24,79 @@ function MakeGptResponse(gptResponse) {
     if (nx.isArray(json)) {
       for (let i = 0, ilen = json.length; i < ilen; ++i)
         if (json[i].text)
-          text += `${cleanText(json[i].text)}\n`;
+          text += `${json[i].text}\n`;
     } else
       text = json.toString();
-    result.text = cleanText(text.toString());
+    response.text = text.toString().trim();
   } catch (err) {
-    result.text = cleanText(stringify(gptResponse));
+    response.text = stringify(gptResponse);
   }
 
-  return result;
+  return response;
 }
 
 
-function MakeChatReq(question, dialog, config, cb) {
+function SendChatReq(context, question, cb) {
 
   cb = cb ? cb : function () {
   };
 
-  dialog = dialog ? dialog : {};
-  config = config ? config : {};
-
-// convert question into a query object
-
-  let query = {};
-  try {
-    if (question.constructor === Object)
-      query = question;
-    else if (question.charAt(0) === '{')
-      query = JSON.parse(question);
-    else
-      query = {prompt: question};
-
-    if (nx.isString(query.temperature))
-      query.temperature = parseFloat(query.temperature);
-    if (nx.isString(query.max_tokens))
-      query.max_tokens = parseInt(query.max_tokens);
-    if (nx.isString(query.top_p))
-      query.top_p = parseFloat(query.top_p);
-    if (nx.isString(query.frequency_penalty))
-      query.frequency_penalty = parseFloat(query.frequency_penalty);
-    if (nx.isString(query.presence_penalty))
-      query.presence_penalty = parseFloat(query.presence_penalty);
-  } catch (err) {
-    query = {prompt: question};
+  question = (!question) ? '' : question.toString().trim();
+  if (!question.length) {
+    cb(new Error('no question given'));
+    return context;
   }
-
-  const _dialog = {   // default values
-    model: 'text-davinci-003',
-    temperature: 0,
-    max_tokens: 1000,
-    top_p: 1.0,
-    frequency_penalty: 0.0,
-    presence_penalty: 0.0,
-    stop: ['"""']
-  };
-  dialog = {..._dialog, ...dialog};
-  dialog = {...dialog, ...query};
-
-  const _config = {
-    type: 'https',
-    hostname: 'api.openai.com',
-    port: 443,
-    path: '/v1/completions',
-    method: 'POST',
-    debug: false,
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer YOUR_API_KEY_HERE'
-    }
-  }
-  config = {..._config, ...config};
-
-  const gptRequest = ParseGptPayload(dialog);
-
-  if (config.debug)
-    console.log(`request: ${gptRequest.text}`);
+  context = context ? context : {};
+  context.question = question;
 
   try {
-    const protocol = require(config.type);
-    const req = protocol.request(config, (res) => {
+// build config (merge passed value)
+    context.config = context.config ? context.config : {};
+    context.config = {
+      ...{   // default values
+        type: 'https',
+        hostname: 'api.openai.com',
+        port: 443,
+
+        path: '/v1/completions',
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer YOUR_API_KEY_HERE'
+        }
+      }, ...context.config
+    };
+
+// build dialog (merge passed value)
+    context.dialog = context.dialog ? context.dialog : {};
+    context.dialog = {
+      ...{   // default values
+        model: 'text-davinci-003',
+        user: 'You',
+        temperature: 0,
+        max_tokens: 1000,
+        top_p: 1.0,
+        frequency_penalty: 0.0,
+        presence_penalty: 0.0,
+        stop: [`"""`]
+      }, ...context.dialog
+    };
+
+// convert any strings to numerics...
+    if (nx.isString(context.dialog.temperature))
+      context.dialog.temperature = parseFloat(context.dialog.temperature);
+    if (nx.isString(context.dialog.max_tokens))
+      context.dialog.max_tokens = parseInt(context.dialog.max_tokens);
+    if (nx.isString(context.dialog.top_p))
+      context.dialog.top_p = parseFloat(context.dialog.top_p);
+    if (nx.isString(context.dialog.frequency_penalty))
+      context.dialog.frequency_penalty = parseFloat(context.dialog.frequency_penalty);
+    if (nx.isString(context.dialog.presence_penalty))
+      context.dialog.presence_penalty = parseFloat(context.dialog.presence_penalty);
+
+    const protocol = require(context.config.type);
+    const req = protocol.request(context.config, (res) => {
       res.setEncoding('utf8');
       let body = '';
 
@@ -141,10 +105,12 @@ function MakeChatReq(question, dialog, config, cb) {
       });
 
       res.on('end', () => {
-        const gptResponse = MakeGptResponse(body);
-        if (config.debug)
-          console.log(`response: ${stringify(gptResponse.json.obj)}`);
-        cb(null, {request: gptRequest, response: gptResponse});
+        context.response = GetGptText(JSON.parse(body));
+        if (context.debug)
+          console.log(stringify(context.response));
+        context.config.headers.Authorization = 'YOUR_API_KEY_GOES_HERE';
+        context.history.appendLine(context.response.text);
+        cb(null, context);
       });
     });
 
@@ -153,13 +119,48 @@ function MakeChatReq(question, dialog, config, cb) {
       cb(err);
     });
 
-// write data to request body
-    req.write(gptRequest.text);
+
+// build prompt
+    if (!context.history)
+      context.history = new nx.StringBuilder();
+
+// optimize the history, select similar topics
+    let hb = context.history.selectSimilar(context.question, 0.5);
+    if (hb.length() <= 0)
+      hb = context.history;
+
+    question = `${context.dialog.user}: ${question}`;
+    context.history.appendLine(question);
+    context.dialog.prompt = `${hb.toString().trim()}\n${question}`;
+
+// send request data
+    const reqData = stringify(context.dialog);
+    if (context.debug)
+      console.log(reqData);
+    req.write(reqData);
     req.end();
   } catch (err) {
     console.error(err.toString());
     cb(err);
   }
+
+  return context;
+}
+
+
+function Ask(context, question, cb) {
+  if (!context)
+    context = {};
+  if (!context.config)
+    context.config = {
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      }
+    };
+
+  context.config.headers.Authorization = `Bearer ${env.openai_api_key}`;
+  return SendChatReq(context, question, cb);
 }
 
 
@@ -176,11 +177,11 @@ function StartWebService(argv) {
   app.use(cors())
   app.get(`${url.path}*`, (req, res) => {
     try {
-      let query = req.url.slice(url.path.length);
-      if (query.charAt(0) === '?' || query.charAt(0) === '&') {
-        query = query.slice(Math.max(1, query.indexOf('=') + 1));
-      }
-      MakeChatReq(query, env.dialog, env.protocol_config, function (err, result) {
+      let question = req.url.slice(url.path.length);
+      if (question.charAt(0) === '?' || question.charAt(0) === '&')
+        question = question.slice(Math.max(1, question.indexOf('=') + 1));
+
+      Ask(null, question, function (err, result) {
         res.send(result.response.text);
       });
     } catch (err) {
@@ -190,14 +191,19 @@ function StartWebService(argv) {
 
   app.post(`${url.path}*`, (req, res) => {
     // Get the prompt from the request
-    let query = '';
+    let body = '';
     req.on('data', function (chunk) {
-      query += chunk;
+      body += chunk;
     });
 
     req.on('end', function () {
-      MakeChatReq(query, env.dialog, env.protocol_config, function (err, result) {
-        res.send(result.response.text);
+      let context = {};
+      if (body.length) 
+        context = JSON.parse(body);
+      if(context.history)
+        context.history = new nx.StringBuilder(context.history);
+      Ask(context, context.question, function (err, result) {
+        res.send(stringify(result));
       });
     });
   });
@@ -208,31 +214,20 @@ function StartWebService(argv) {
 }
 
 
-function Ask(question, cb) {
-  cb = cb ? cb : function () {
-  };
+function QuizLoop() {
 
-  MakeChatReq(question, env.dialog, env.protocol_config, function (err, result) {
-    if (err)
-      return cb(err);
-    cb(null, result);
-  });
-}
-
-
-function quizLoop() {
-
+  let context;
   const rl = readline.createInterface(process.stdin, process.stdout);
+
   rl.on('line', (question) => {
     if (question.length <= 0)
       process.exit(0);
 
-    const query = {prompt: question};
-    Ask(query, function (err, result) {
+    context = Ask(context, question, function (err, result) {
       if (err)
         return console.error(err.toString());
-      result = MakeGptRequest(result);
       console.log(`${result.response.text}\n`);
+      context = result;
     });
   });
 }
@@ -244,7 +239,7 @@ if (argv.length) {
   while (argv.length) {
     switch (argv[0]) {
       default:
-        return Ask(argv.join(' '), function (err, result) {
+        return Ask(null, argv.join(' '), function (err, result) {
           if (err)
             return console.error(err.toString());
           console.log(`${result.response.text}\n`);
@@ -253,8 +248,8 @@ if (argv.length) {
       case '-d':
         env.protocol_config.debug = true;
         break;
-      case '-l':
-        return quizLoop(argv.slice(1));
+      case '-q':
+        return QuizLoop(argv.slice(1));
         break;
       case '-w':
         return StartWebService(argv.slice(1));
@@ -263,5 +258,5 @@ if (argv.length) {
     argv = argv.slice(1);   // next arg
   }
 } else {
-  return quizLoop();
+  return QuizLoop();
 }

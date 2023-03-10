@@ -78,4 +78,4 @@ app.use('/', function (clientRequest, clientResponse) {
 
 const url = Url.parse(env.proxy.proxyServerUrl);
 app.listen(url.port, url.hostname);
-console.log(`Proxy server listening on port ${url.hostname} for ${targetUrl}`);
+console.log(`Proxy server listening on port ${url.hostname}:${url.port} for ${targetUrl}`);

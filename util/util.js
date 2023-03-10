@@ -414,7 +414,8 @@ nx.fileExists = function (path) {
 
 
 nx.getBody = function (req, cb) {
-  cb = cb ? cb : function() {};
+  cb = cb ? cb : function () {
+  };
   try {
     const body = [];
     req.on('data', (chunk) => {
@@ -432,7 +433,8 @@ nx.getBody = function (req, cb) {
 
 
 nx.fsIterate = function (dir, cb) {
-  cb = cb ? cb : function() {};
+  cb = cb ? cb : function () {
+  };
   fs.readdir(dir, function (err, objects) {
     if (err) {
       nx.logError(`Could not list ${objects}`, err);
@@ -641,7 +643,66 @@ nx.putAscii = function (string) {
 }
 
 nx.puts = function (string, cb) {
-  cb = cb ? cb : function() {};
+  cb = cb ? cb : function () { };
   string = string ? string : '';
   return fs.write(1, string.toString(), cb);
+}
+
+
+nx.StringBuilder = function (initial) {
+  this._array = [];
+  this._index = 0;
+  this._stringbuilder = true;
+  if (nx.isString(initial))
+    this.append(initial);
+  else if (nx.isArray(initial))
+    for(let i = 0, ilen = initial.length; i < ilen; ++i)
+      this.append(initial[i]);
+  else if (nx.isObject(initial) && initial._stringbuilder)
+    for(let i = 0, ilen = initial._array.length; i < ilen; ++i)
+      this.append(initial._array[i]);
+}
+
+nx.StringBuilder.prototype.append = function (str) {
+  if (!str)
+    return;   // nothing
+  this._array[this._index] = str;
+  this._index++;
+}
+
+nx.StringBuilder.prototype.appendLine = function(str) {
+  return this.append(`${str}\n`);
+}
+
+nx.StringBuilder.prototype.length = function() {
+  return this._array.length;
+}
+
+nx.StringBuilder.prototype.pop = function(n) {
+  return this._array.pop(n);
+}
+
+nx.StringBuilder.prototype.selectSimilar = function (to, ratio) {
+  const sb = new nx.StringBuilder();
+  to = (!to) ? '' : to.toString().trim();
+  if (!to.length) 
+    return sb;
+  const similarity = require('string-cosine-similarity');
+  for(let i = 0, ilen = this._array.length; i < ilen; ++i){
+    if(similarity(to, this._array[i]) > ratio)
+      sb.append(this._array[i]);
+  }
+  return sb;
+}
+
+nx.StringBuilder.prototype.insert = function (index, ...items) {
+  this._array.splice(index, 0, ...items);
+}
+
+nx.StringBuilder.prototype.sort = function () {
+  this._array.sort();
+}
+
+nx.StringBuilder.prototype.toString = function () {
+  return this._array.join('');
 }

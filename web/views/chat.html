@@ -18,7 +18,7 @@
   }
 
   function serializer(replacer, cycleReplacer) {
-    var stack = [], keys = []
+    let stack = [], keys = []
 
     if (cycleReplacer == null) cycleReplacer = function (key, value) {
       if (stack[0] === value) return "[Circular ~]"
@@ -27,7 +27,7 @@
 
     return function (key, value) {
       if (stack.length > 0) {
-        var thisPos = stack.indexOf(this)
+        let thisPos = stack.indexOf(this)
         ~thisPos ? stack.splice(thisPos + 1) : stack.push(this)
         ~thisPos ? keys.splice(thisPos, Infinity, key) : keys.push(key)
         if (~stack.indexOf(value)) value = cycleReplacer.call(this, key, value)
@@ -48,15 +48,14 @@
 
   const BrowserDetail = {};
 
-  const ChatDialog = {
+  let ChatContext = {dialog: {
     model: 'text-davinci-003',
     temperature: 0,
     max_tokens: 4000,
-    prompt: '',
     top_p: 1.0,
     frequency_penalty: 0.0,
     presence_penalty: 0.0
-  };
+  }};
 
   function LogDebug(text) {
     loggerText.value += (text + '\n');
@@ -72,28 +71,6 @@
 
   function cleanText(text) {
     return decodeURIComponent(text).trim();
-  }
-
-  function gptText(gptResponse) {
-    try {
-      let response = JSON.parse(gptResponse);
-      if (response.error)
-        response = response.error;
-      if (response.message)
-        response = response.message.toString();
-      if (response.choices)
-        response = response.choices;
-      if (response instanceof Array) {
-        let text = '';
-        for (let i = 0, ilen = response.length; i < ilen; ++i)
-          if (response[i].text)
-            text += response[i].text;
-        response = text;
-      }
-      return response.toString();
-    } catch (err) {
-      return stringify(gptResponse);
-    }
   }
 
   function keydown(key) {
@@ -158,12 +135,12 @@
 
   function tempSlide(it) {
     tempSliderValue.innerText = it.value;
-    ChatDialog.temperature = it.value;
+    ChatContext.dialog.temperature = it.value;
   }
 
   function vocabSlide(it) {
     vocabSliderValue.innerText = it.value;
-    ChatDialog.top_p = it.value;
+    ChatContext.dialog.top_p = it.value;
   }
 
   function ChangeLang(o) {
@@ -189,23 +166,28 @@
     oHttp.setRequestHeader('Accept', 'application/json');
 
     oHttp.onerror = function (err) {
-      LogDebug(stringify(err));
-      addResponseText(cleanText(stringify(err)));
+      err = 'There was a problem communicating with the server';
+      LogDebug(err);
+      addResponseText(err);
     }
 
     oHttp.onreadystatechange = function () {
       if (oHttp.readyState === 4) {
-        const gptResponse = oHttp.responseText;
-        let response = cleanText(gptText(gptResponse));
-        if (response === '')
+        let body = oHttp.responseText;
+        let response;
+        if(body && body.length) {
+          ChatContext = JSON.parse(body);
+           response = ChatContext.response.text;
+        }
+        if (! response || response.length <= 0)
           response = 'No response';
         TextToSpeech(response);
         addResponseText(`Chat GPT: ${response}\n\n`);
       }
     }
 
-    ChatDialog.prompt = question;
-    oHttp.send(stringify(ChatDialog));
+    ChatContext.question = question;
+    oHttp.send(stringify(ChatContext));
 
     addResponseText(`Me: ${question}\n`);
     theQuestion.value = '';
