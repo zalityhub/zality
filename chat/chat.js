@@ -254,13 +254,18 @@ function Hits(args, cmds) {
   if (!arg.length)
     return {tail: args, hits: hits, length: hits.length};
 
-  Object.keys(cmds).forEach(function (key) {
+  const keys = Object.keys(cmds);
+  for (let i = 0, ilen = keys.length; i < ilen; ++i) {
+    const key = keys[i];
     if (key.indexOf(arg) === 0)
-      hits.push(cmds[key]);
-  });
+      hits.push({hit: cmds, val: cmds[key], key: key, what: nx.isWhat(cmds[key])});
+  }
+  ;
 
-  if (hits.length === 1 && !nx.isFunction(hits[0])) {    // single hit, continue looking...
-    const nhits = Hits(args.slice(arg.length + 1), hits[0]);
+  if (hits.length === 1 && !hits[0].what.isFunction) {    // single hit, not a function, continue looking...
+    const nhits = Hits(args.slice(arg.length + 1), hits[0].val);
+    if (nhits.length === 1)
+      return nhits;
     hits = nhits.length ? nhits : hits;
   }
 
@@ -277,10 +282,12 @@ function Misses(cmds, indent) {
   if (cmds.hits) {   // these are from hits...
     const hits = cmds.hits;
     for (let i = 0, ilen = hits.length; i < ilen; ++i) {
-      const name = hits[i].name;
-      sb.append(`\n${indent}${name}`);
+      const hit = hits[i];
       if (i === 0)
-        first = name;
+        first = hit.key;
+      sb.append(`\n${indent}${hit.key}`);
+      if (hit.what.isObject)
+        sb.append(Misses(hit.val, indent + '  '));
     }
   } else {
     const keys = Object.keys(cmds);
@@ -310,8 +317,9 @@ function DoCommand(ocmd, cmd, cmds) {
     return console.log(`Try: ${Misses(hits, '  ')}`);
 
 // possible command function
-  if (nx.isFunction(hits.hits[0]))    // resolved to a command function
-    return hits.hits[0](hits.tail)    // call the command
+  const hit = hits.hits[0];
+  if (hit.what.isFunction)    // resolved to a command function
+    return hit.val(hits.tail)    // call the command
 
   return console.log(`Try: ${ocmd} ${Misses(hits, '  ')}`);
 }
@@ -334,15 +342,11 @@ function ChatCommand(context, cmd) {
       show:
         {
           history: function (opts) {
-            if (!context)
-              return console.log('no context');
             if (!context.history || !context.history._array.length)
               return console.log('there is no history to show');
             return console.log(`history:\n${context.history.toString('\n')}`)
           },
           enabled: function (opts) {
-            if (!context)
-              return console.log('no context');
             Object.keys(context.enabled).forEach(function (key) {
               const p = context.enabled[key];
               console.log(`${key} ${p ? 'enabled' : 'disabled'}`);
@@ -355,49 +359,48 @@ function ChatCommand(context, cmd) {
         },
       enable:
         function (opts) {
-          if (!context)
-            return console.log('no context');
           opts = (opts ? opts : '').toString().trim();
-          if (!opts.length || context.enabled[opts] === undefined)
-            return console.log(`Try: Enable ${buildKeyList(context.enabled)}`);
-          if (context.enabled[opts])
-            return console.log(`${opts} is not disabled`);
-          context.enabledd[opts] = true;
-          return console.log(`${opts} enabled`);
+          const hits = Hits(opts, context.enabled);
+          if(hits.length === 1) {
+            const key = hits.hits[0].key;
+            context.enabled[key] = true;
+            return console.log(`${key} enabled`);
+          }
+          return console.log(`Try: Enable ${Misses(context.enabled, '  ')}`);
         },
       disable:
         function (opts) {
-          if (!context)
-            return console.log('no context');
           opts = (opts ? opts : '').toString().trim();
-          if (!opts.length || context.enabled[opts] === undefined)
-            return console.log(`Try: Disable ${buildKeyList(context.enabled)}`);
-          context.enabled[opts] = false;
-          return console.log(`${opts} disabled`);
+          const hits = Hits(opts, context.enabled);
+          if(hits.length === 1) {
+            const key = hits.hits[0].key;
+            context.enabled[key] = false;
+            return console.log(`${key} disabled`);
+          }
+          return console.log(`Try: Disable ${Misses(context.enabled, '  ')}`);
         },
       debug:
         function (opts) {
-          if (!context)
-            return console.log('no context');
           opts = (opts ? opts : '').toString().trim();
-
-          // const hits = Hits(opts, context.debug);
-
-          if (!opts.length || context.debug[opts] === undefined)
-            return console.log(`Try: Debug ${buildKeyList(context.debug)}`);
-          context.debug[opts] = true;
-          return console.log(`debug for ${opts} enabled`);
+          const hits = Hits(opts, context.debug);
+          if(hits.length === 1) {
+            const key = hits.hits[0].key;
+            context.debug[key] = true;
+            return console.log(`debug for ${key} enabled`);
+          }
+          return console.log(`Try: Debug ${Misses(context.debug, '  ')}`);
         },
       nodebug:
         function (opts) {
-          if (!context)
-            return console.log('no context');
           opts = (opts ? opts : '').toString().trim();
-          if (!opts.length || context.debug[opts] === undefined)
-            return console.log(`Try: NoDebug ${buildKeyList(context.debug)}`);
-          context.debug[opts] = false;
-          return console.log(`debug for ${opts} disabled`);
-        },
+          const hits = Hits(opts, context.debug);
+          if(hits.length === 1) {
+            const key = hits.hits[0].key;
+            context.debug[key] = false;
+            return console.log(`debug for ${key} disabled`);
+          }
+          return console.log(`Try: NoDebug ${Misses(context.debug, '  ')}`);
+        }
     }
 
   if (!context)

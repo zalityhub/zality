@@ -416,6 +416,19 @@ nx.isTrue = function (it, isRequired) {
 }
 
 
+nx.isWhat = function(it) {
+  const what = {};
+
+  what.isNull = nx.isNull(it);
+  what.isObject = nx.isObject(it);
+  what.isArray = nx.isArray(it);
+  what.isString = nx.isString(it);
+  what.isFunction = nx.isFunction(it);
+  what.isTrue = nx.isTrue(it);
+  return what;
+}
+
+
 nx.statSafeSync = function (path) {
   try {
     const stat = fs.statSync(path);
