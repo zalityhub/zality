@@ -321,6 +321,7 @@ function DoCommand(ocmd, cmd, cmds) {
   if (hit.what.isFunction)    // resolved to a command function
     return hit.val(hits.tail)    // call the command
 
+// partial command: missed, give them some more help
   return console.log(`Try: ${ocmd} ${Misses(hits, '  ')}`);
 }
 
@@ -347,6 +348,7 @@ function ChatCommand(context, cmd) {
             return console.log(`history:\n${context.history.toString('\n')}`)
           },
           enabled: function (opts) {
+          // need to handle save object
             Object.keys(context.enabled).forEach(function (key) {
               const p = context.enabled[key];
               console.log(`${key} ${p ? 'enabled' : 'disabled'}`);
@@ -361,8 +363,12 @@ function ChatCommand(context, cmd) {
         function (opts) {
           opts = (opts ? opts : '').toString().trim();
           const hits = Hits(opts, context.enabled);
+          // need to handle save object
           if(hits.length === 1) {
-            const key = hits.hits[0].key;
+            const hit = hits.hits[0];
+            if(hit.what.isObject)
+              return console.log(`Try: Enable ${Misses(hits, '  ')}`); // command not complete
+            const key = hit.key;
             context.enabled[key] = true;
             return console.log(`${key} enabled`);
           }
@@ -373,7 +379,10 @@ function ChatCommand(context, cmd) {
           opts = (opts ? opts : '').toString().trim();
           const hits = Hits(opts, context.enabled);
           if(hits.length === 1) {
-            const key = hits.hits[0].key;
+            const hit = hits.hits[0];
+            if(hit.what.isObject)
+              return console.log(`Try: Disable ${Misses(hits, '  ')}`); // command not complete
+            const key = hit.key;
             context.enabled[key] = false;
             return console.log(`${key} disabled`);
           }
@@ -384,7 +393,10 @@ function ChatCommand(context, cmd) {
           opts = (opts ? opts : '').toString().trim();
           const hits = Hits(opts, context.debug);
           if(hits.length === 1) {
-            const key = hits.hits[0].key;
+            const hit = hits.hits[0];
+            if(hit.what.isObject)
+              return console.log(`Try: Debug ${Misses(hits, '  ')}`); // command not complete
+            const key = hit.key;
             context.debug[key] = true;
             return console.log(`debug for ${key} enabled`);
           }
@@ -395,7 +407,10 @@ function ChatCommand(context, cmd) {
           opts = (opts ? opts : '').toString().trim();
           const hits = Hits(opts, context.debug);
           if(hits.length === 1) {
-            const key = hits.hits[0].key;
+            const hit = hits.hits[0];
+            if(hit.what.isObject)
+              return console.log(`Try: NoDebug ${Misses(hits, '  ')}`); // command not complete
+            const key = hit.key;
             context.debug[key] = false;
             return console.log(`debug for ${key} disabled`);
           }
