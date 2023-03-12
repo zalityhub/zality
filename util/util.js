@@ -173,7 +173,7 @@ nx.getProcessArg = function (i) {
 
 // Hash To Array
 nx.hashToArray = function (obj) {
-  let _ar = [];
+  const _ar = [];
   Object.keys(obj).forEach(function (key) {
     const p = obj[key];
     if (p != null)
@@ -193,19 +193,39 @@ nx.parseJsonFile = function (file) {
   }
 }
 
+nx.getHomeDir = function () {
+  if (nx.platform === 'win32')
+    return `c:/cygwin64/home/hbray/`;
+  else
+    return `/home/hbray/`;
+}
+
 nx.getEnv = function (section, isRequired, file) {
   if (nx.isNull(isRequired))
     isRequired = false;
-  if (nx.isNull(file)) {
-    if (nx.platform === 'win32')
-      file = `c:/cygwin64/home/hbray/etc/env.json`;
-    else
-      file = `/home/hbray/etc/env.json`;
-  }
+  if (nx.isNull(file))
+    file = `${nx.getHomeDir()}etc/env.json`;
   const env = nx.parseJsonFile(file);
   if (isRequired && (nx.isNull(env) || ((!nx.isNull(section)) && nx.isNull(env[section]))))
     nx.fatal(`unable to continue without a ${file}.${section}`);
   return nx.isNull(section) ? env : env[section];
+}
+
+nx.putEnv = function (section, env, file) {
+  if (nx.isNull(file))
+    file = `${nx.getHomeDir()}etc/env.json`;
+  const current = nx.getEnv(null, true, file);
+  if (section)
+    current[section] = env;
+  else
+    current = env;
+
+  try {
+    const text = stringify(current, null, 4);
+    fs.writeFileSync(file, text.toString().trim());
+  } catch (e) {
+    nx.logError(e.toString());
+  }
 }
 
 
@@ -643,7 +663,8 @@ nx.putAscii = function (string) {
 }
 
 nx.puts = function (string, cb) {
-  cb = cb ? cb : function () { };
+  cb = cb ? cb : function () {
+  };
   string = string ? string : '';
   return fs.write(1, string.toString(), cb);
 }
@@ -656,10 +677,10 @@ nx.StringBuilder = function (initial) {
   if (nx.isString(initial))
     this.append(initial);
   else if (nx.isArray(initial))
-    for(let i = 0, ilen = initial.length; i < ilen; ++i)
+    for (let i = 0, ilen = initial.length; i < ilen; ++i)
       this.append(initial[i]);
   else if (nx.isObject(initial) && initial._stringbuilder)
-    for(let i = 0, ilen = initial._array.length; i < ilen; ++i)
+    for (let i = 0, ilen = initial._array.length; i < ilen; ++i)
       this.append(initial._array[i]);
 }
 
@@ -670,26 +691,22 @@ nx.StringBuilder.prototype.append = function (str) {
   this._index++;
 }
 
-nx.StringBuilder.prototype.appendLine = function(str) {
+nx.StringBuilder.prototype.appendLine = function (str) {
   return this.append(`${str}\n`);
 }
 
-nx.StringBuilder.prototype.length = function() {
-  return this._array.length;
-}
-
-nx.StringBuilder.prototype.pop = function(n) {
+nx.StringBuilder.prototype.pop = function (n) {
   return this._array.pop(n);
 }
 
-nx.StringBuilder.prototype.selectSimilar = function (to, ratio) {
+nx.StringBuilder.prototype.selectSimilar = function (text, ratio) {
   const sb = new nx.StringBuilder();
-  to = (!to) ? '' : to.toString().trim();
-  if (!to.length) 
+  text = (!text) ? '' : text.toString().trim();
+  if (!text.length)
     return sb;
   const similarity = require('string-cosine-similarity');
-  for(let i = 0, ilen = this._array.length; i < ilen; ++i){
-    if(similarity(to, this._array[i]) > ratio)
+  for (let i = 0, ilen = this._array.length; i < ilen; ++i) {
+    if (similarity(text, this._array[i]) > ratio)
       sb.append(this._array[i]);
   }
   return sb;
@@ -703,6 +720,15 @@ nx.StringBuilder.prototype.sort = function () {
   this._array.sort();
 }
 
-nx.StringBuilder.prototype.toString = function () {
-  return this._array.join('');
+nx.StringBuilder.prototype.toString = function (opts) {
+  if (!opts || nx.isString(opts))
+    return this._array.join(opts?opts:'');
+
+  opts.pre = opts.pre ? opts.pre : '';
+  opts.post = opts.post ? opts.post : '';
+
+  const sb = new nx.StringBuilder();
+  for (let i = 0, ilen = this._array.length; i < ilen; ++i)
+    sb.append(`${opts.pre}${this._array[i].toString()}${opts.post}`);
+  return sb.toString();
 }
