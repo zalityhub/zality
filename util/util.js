@@ -128,9 +128,111 @@ nx.enum.prototype.valueOf = function (key_val) {
 }
 
 
+nx.isNull = function (en, required) {
+  if (required === undefined || required === null)
+    required = false;
+  if (en === undefined || en === null) {
+    if (!required)
+      return true;
+    Fatal(stringify(en) + ' must not be null');
+  }
+  return false;
+}
+
+nx.isObject = function (en, required) {
+  if (nx.isNull(required))
+    required = false;
+  if (!nx.isNull(en) && en.constructor === Object)
+    return true;
+  if (!required)
+    return false;
+  Fatal(stringify(en) + ' must be an Object');
+}
+
+
+nx.isArray = function (en, required) {
+  if (nx.isNull(required))
+    required = false;
+  if (en instanceof Array)
+    return true;
+  if (!required)
+    return false;
+  Fatal(stringify(en) + ' must be an Array');
+}
+
+
+nx.isString = function (en, required) {
+  if (nx.isNull(required))
+    required = false;
+  if (typeof (en) === 'string')
+    return true;
+  if (!required)
+    return false;
+  Fatal(stringify(en) + ' must be a String');
+}
+
+nx.isFunction = function (it, isRequired) {
+  if (nx.isNull(isRequired))
+    isRequired = false;
+
+  if (typeof it === 'function')
+    return true;
+  if (!isRequired)
+    return false;
+  Fatal(stringify(it) + ' must be a Function');
+}
+
+nx.isNumber = function (en, required) {
+  if (nx.isNull(required))
+    required = false;
+  if (typeof (en) === 'number')
+    return true;
+  if (!required)
+    return false;
+  Fatal(stringify(en) + ' must be a Number');
+}
+
+nx.isBoolean = function (en, required) {
+  if (nx.isNull(required))
+    required = false;
+  if (typeof (en) === 'boolean')
+    return true;
+  if (!required)
+    return false;
+  Fatal(stringify(en) + ' must be a Boolean');
+}
+
+nx.isTrue = function (it, isRequired) {
+  if (nx.isNull(isRequired))
+    isRequired = false;
+
+  if (it === undefined && isRequired)
+    Fatal(stringify(it) + ' must be Present');
+
+  if (it !== undefined && it)
+    return true;
+  return false;
+}
+
+
+nx.isWhat = function(it) {
+  const what = {};
+
+  what.isNull = nx.isNull(it);
+  what.isObject = nx.isObject(it);
+  what.isArray = nx.isArray(it);
+  what.isString = nx.isString(it);
+  what.isFunction = nx.isFunction(it);
+  what.isBoolean = nx.isBoolean(it);
+  what.isNumber = nx.isNumber(it);
+  what.isTrue = nx.isTrue(it);
+  return what;
+}
+
 nx.isCharDigit = function (c) {
   return c >= '0' && c <= '9';
 }
+
 
 
 nx.getCpuInfo = function () {
@@ -214,7 +316,7 @@ nx.getEnv = function (section, isRequired, file) {
 nx.putEnv = function (section, env, file) {
   if (nx.isNull(file))
     file = `${nx.getHomeDir()}etc/env.json`;
-  const current = nx.getEnv(null, true, file);
+  let current = nx.getEnv(null, true, file);
   if (section)
     current[section] = env;
   else
@@ -330,104 +432,6 @@ nx.doCmd = function (cmd, args) {
     return [-1, '', nx.logError('DoCmd failed ' + err)];
   }
 }
-
-/**
- * @return {boolean}
- */
-nx.isNull = function (en, required) {
-  if (required === undefined || required === null)
-    required = false;
-  if (en === undefined || en === null) {
-    if (!required)
-      return true;
-    Fatal(stringify(en) + ' must not be null');
-  }
-  return false;
-}
-
-/**
- * @return {boolean}
- */
-nx.isObject = function (en, required) {
-  if (nx.isNull(required))
-    required = false;
-  if (!nx.isNull(en) && en.constructor === Object)
-    return true;
-  if (!required)
-    return false;
-  Fatal(stringify(en) + ' must be an Object');
-}
-
-
-/**
- * @return {boolean}
- */
-nx.isArray = function (en, required) {
-  if (nx.isNull(required))
-    required = false;
-  if (en instanceof Array)
-    return true;
-  if (!required)
-    return false;
-  Fatal(stringify(en) + ' must be an Array');
-}
-
-
-/**
- * @return {boolean}
- */
-nx.isString = function (en, required) {
-  if (nx.isNull(required))
-    required = false;
-  if (typeof (en) === 'string')
-    return true;
-  if (!required)
-    return false;
-  Fatal(stringify(en) + ' must be a String');
-}
-
-/**
- * @return {boolean}
- */
-nx.isFunction = function (it, isRequired) {
-  if (nx.isNull(isRequired))
-    isRequired = false;
-
-  if (typeof it === 'function')
-    return true;
-  if (!isRequired)
-    return false;
-  Fatal(stringify(it) + ' must be a Function');
-}
-
-/**
- * @return {boolean}
- */
-nx.isTrue = function (it, isRequired) {
-  if (nx.isNull(isRequired))
-    isRequired = false;
-
-  if (it === undefined && isRequired)
-    Fatal(stringify(it) + ' must be Present');
-
-  if (it !== undefined && it)
-    return true;
-  return false;
-}
-
-
-nx.isWhat = function(it) {
-  const what = {};
-
-  what.isNull = nx.isNull(it);
-  what.isObject = nx.isObject(it);
-  what.isArray = nx.isArray(it);
-  what.isString = nx.isString(it);
-  what.isFunction = nx.isFunction(it);
-  what.isTrue = nx.isTrue(it);
-  return what;
-}
-
 
 nx.statSafeSync = function (path) {
   try {
@@ -685,7 +689,6 @@ nx.puts = function (string, cb) {
 
 nx.StringBuilder = function (initial) {
   this._array = [];
-  this._index = 0;
   this._stringbuilder = true;
   if (nx.isString(initial))
     this.append(initial);
@@ -700,8 +703,7 @@ nx.StringBuilder = function (initial) {
 nx.StringBuilder.prototype.append = function (str) {
   if (!str)
     return;   // nothing
-  this._array[this._index] = str;
-  this._index++;
+  this._array.push(str);
 }
 
 nx.StringBuilder.prototype.appendLine = function (str) {
@@ -709,7 +711,11 @@ nx.StringBuilder.prototype.appendLine = function (str) {
 }
 
 nx.StringBuilder.prototype.pop = function (n) {
-  return this._array.pop(n);
+  this._array.pop(n);
+}
+
+nx.StringBuilder.prototype.slice = function (n) {
+  this._array.slice(n);
 }
 
 nx.StringBuilder.prototype.selectSimilar = function (text, ratio) {
