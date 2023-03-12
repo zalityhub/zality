@@ -348,7 +348,7 @@ function ChatCommand(context, cmd) {
             return console.log(`history:\n${context.history.toString('\n')}`)
           },
           enabled: function (opts) {
-          // need to handle save object
+          // TODO:  need to handle save object
             Object.keys(context.enabled).forEach(function (key) {
               const p = context.enabled[key];
               console.log(`${key} ${p ? 'enabled' : 'disabled'}`);
@@ -363,7 +363,7 @@ function ChatCommand(context, cmd) {
         function (opts) {
           opts = (opts ? opts : '').toString().trim();
           const hits = Hits(opts, context.enabled);
-          // need to handle save object
+          // TODO:  need to handle save object
           if(hits.length === 1) {
             const hit = hits.hits[0];
             if(hit.what.isObject)
