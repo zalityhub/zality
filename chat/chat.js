@@ -124,6 +124,8 @@ function SendChatReq(context, question, cb) {
         context.response = FormatGptResponse(JSON.parse(body));
         if (context.debug.protocol)
           Log(stringify(context.response));
+        if (context.enabled.usage) 
+          Log(stringify(context.response.json.usage));
         if (context.config.headers.Authorization)
           context.config.headers.Authorization = 'YOUR_API_KEY_GOES_HERE';    // mask the key...
         context.history.appendLine(context.response.text);
