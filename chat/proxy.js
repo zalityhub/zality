@@ -7,10 +7,10 @@ const app = express();
 const https = require('https');
 const http = require('http');
 
-const env = nx.getEnv('chatgpt', true);
+const Config = nx.getEnv('chatgpt', true);
 
-const targetUrl = env.proxy.targetUrl;
-const proxyServerUrl = env.proxy.proxyServerUrl;
+const targetUrl = Config.proxy.targetUrl;
+const proxyServerUrl = Config.proxy.proxyServerUrl;
 
 if (targetUrl === undefined || proxyServerUrl === undefined) {
   console.error('Cannot continue without targetUrl and proxyServerUrl');
@@ -76,6 +76,6 @@ app.use('/', function (clientRequest, clientResponse) {
   });
 });
 
-const url = Url.parse(env.proxy.proxyServerUrl);
+const url = Url.parse(Config.proxy.proxyServerUrl);
 app.listen(url.port, url.hostname);
 console.log(`Proxy server listening on port ${url.hostname}:${url.port} for ${targetUrl}`);

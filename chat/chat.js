@@ -3,7 +3,8 @@ const util = require('util');
 const stringify = require('json-stringify-safe');
 
 const nx = require('@zality/nodejs/util');
-const env = nx.getEnv('chatgpt', true);
+const Config = nx.getEnv('chatgpt', true);
+const ChatConfig = Config.chat;
 const merge = require('lodash.merge');
 
 
@@ -63,16 +64,16 @@ function BuildContext(context, apiKey) {
   context = context ? context : {};
 
   // get a list of properties
-  const keys = Object.keys(env);
+  const keys = Object.keys(ChatConfig);
   const properties = [];
   for (let i = 0, ilen = keys.length; i < ilen; ++i)
     properties.push(context[keys[i]]);
 
-// merge given properties into the defaults from env
+// merge given properties into the defaults from ChatConfig
   for (let i = 0, ilen = keys.length; i < ilen; ++i) {
     const key = keys[i];
     context[key] = {};
-    merge(context[key], env[key]);
+    merge(context[key], ChatConfig[key]);
     if (properties[i])
       merge(context[key], properties[i]);
     if (context[key]._stringbuilder)
@@ -131,8 +132,7 @@ function FormatGptResponse(gptResponse) {
 
 function SendChatReq(context, question, cb) {
 
-  cb = cb ? cb : function () {
-  };
+  cb = cb ? cb : function () { };
 
   question = (!question) ? '' : question.toString().trim();
   if (!question.length) {
@@ -141,7 +141,7 @@ function SendChatReq(context, question, cb) {
   }
 
   try {
-    context = BuildContext(context, env.config.headers.Authorization);
+    context = BuildContext(context, ChatConfig.config.headers.Authorization);
     context.question = question;
 
     const protocol = require(context.config.type);  // select http or https
@@ -162,6 +162,8 @@ function SendChatReq(context, question, cb) {
         if (context.config.headers.Authorization)
           context.config.headers.Authorization = 'YOUR_API_KEY_GOES_HERE';    // mask the key...
         context.history.appendLine(context.response.text);
+        if (context.debug.dialog)
+          Log(context.response.text);
         cb(null, context);
       });
     });
@@ -190,11 +192,18 @@ function SendChatReq(context, question, cb) {
     }
 
     question = `${context.dialog.user}: ${question}`;
+    if (context.debug.dialog)
+      Log(question.toString());
     context.history.appendLine(question);
     context.dialog.prompt = `${hb.toString().trim()}\n${question}`;
 
-// send request data
-    const reqData = stringify(context.dialog);
+// Make a copy of the dialog object
+// adjust the max_tokens count
+// then send request data
+    const dialog = {};
+    merge(dialog, context.dialog);
+    dialog.max_tokens -= dialog.prompt.length;
+    const reqData = stringify(dialog);
     if (context.debug.protocol)
       Log(reqData);
     req.write(reqData);
@@ -213,7 +222,7 @@ function Ask(context, question, cb) {
     cb = function (err, result) {
       if (err)
         return LogError(err.toString());
-      Log(`${result.response.text}\n`);
+      Log(`\n${result.response.text}\n`);
     }
   return SendChatReq(context, question, cb);
 }
@@ -227,7 +236,7 @@ function StartWebService(argv) {
 
   argv = argv.join('');
   if (argv.length <= 0)
-    argv = env.proxy.proxyServerUrl;
+    argv = Config.proxy.proxyServerUrl;
 
   const url = Url.parse(argv);
 
@@ -459,12 +468,15 @@ function ChatCommand(context, cmd) {
 function ChatExit(context, status) {
   LogWrite('\nExiting... ');
   if (context && context.enabled.save.history) {
+  Log('this needs work');
+/* TODO
     // save current history
     Log(`Saving ${context.history._array.length} history items`);
-    const current = nx.getEnv('chatgpt', true);
+    const current = nx.getEnv('chatgpt', true).chat;
     current.history = {};
     merge(current.history, context.history);
     nx.putEnv('chatgpt', current);
+*/
   } else
     Log('nothing saved');
   LogWrite('\n');
@@ -476,7 +488,7 @@ function QuizLoop() {
 
   const readline = require('readline');
 
-  const context = BuildContext(null, env.config.headers.Authorization);
+  const context = BuildContext(null, ChatConfig.config.headers.Authorization);
   context.history = new nx.StringBuilder();
   const rl = readline.createInterface(process.stdin, process.stdout);
 

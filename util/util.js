@@ -215,7 +215,7 @@ nx.isTrue = function (it, isRequired) {
 }
 
 
-nx.isWhat = function(it) {
+nx.isWhat = function (it) {
   const what = {};
 
   what.isNull = nx.isNull(it);
@@ -232,7 +232,6 @@ nx.isWhat = function(it) {
 nx.isCharDigit = function (c) {
   return c >= '0' && c <= '9';
 }
-
 
 
 nx.getCpuInfo = function () {
@@ -362,16 +361,24 @@ nx.logger.prototype.logInitMask = function (mask) {
   return this.settings.mask;
 }
 
-nx.logger.prototype.logOutput = function (con, text) {
+nx.logger.prototype.logOutput = function (con, text, lineSpacing) {
   function out(stream, text, lineSpacing) {
-    const eol = Buffer.alloc(lineSpacing).fill('\n');
+    let eol = '';
+    if (lineSpacing)
+      eol = Buffer.alloc(lineSpacing).fill('\n');
     stream.write(`${new Date().toISOString().replace('T', ' ')}:${text}${eol}`);
   }
 
-  out(con, text, this.settings.lineSpacing);
+  if (nx.isNull(lineSpacing))
+    lineSpacing = this.settings.lineSpacing;
+  out(con, text, lineSpacing);
   if (this.settings.stream)
-    out(this.settings.stream, text, this.settings.lineSpacing);
+    out(this.settings.stream, text, lineSpacing);
   return text;
+}
+
+nx.logger.prototype.write = function (text) {
+  return this.logOutput(process.stdout, util.format.apply(this, arguments), 0);
 }
 
 nx.logger.prototype.log = function (text) {
@@ -741,7 +748,7 @@ nx.StringBuilder.prototype.sort = function () {
 
 nx.StringBuilder.prototype.toString = function (opts) {
   if (!opts || nx.isString(opts))
-    return this._array.join(opts?opts:'');
+    return this._array.join(opts ? opts : '');
 
   opts.pre = opts.pre ? opts.pre : '';
   opts.post = opts.post ? opts.post : '';
