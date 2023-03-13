@@ -132,7 +132,8 @@ function FormatGptResponse(gptResponse) {
 
 function SendChatReq(context, question, cb) {
 
-  cb = cb ? cb : function () { };
+  cb = cb ? cb : function () {
+  };
 
   question = (!question) ? '' : question.toString().trim();
   if (!question.length) {
@@ -468,15 +469,15 @@ function ChatCommand(context, cmd) {
 function ChatExit(context, status) {
   LogWrite('\nExiting... ');
   if (context && context.enabled.save.history) {
-  Log('this needs work');
-/* TODO
-    // save current history
-    Log(`Saving ${context.history._array.length} history items`);
-    const current = nx.getEnv('chatgpt', true).chat;
-    current.history = {};
-    merge(current.history, context.history);
-    nx.putEnv('chatgpt', current);
-*/
+    Log('this needs work');
+    /* TODO
+        // save current history
+        Log(`Saving ${context.history._array.length} history items`);
+        const current = nx.getEnv('chatgpt', true).chat;
+        current.history = {};
+        merge(current.history, context.history);
+        nx.putEnv('chatgpt', current);
+    */
   } else
     Log('nothing saved');
   LogWrite('\n');
@@ -509,6 +510,10 @@ function QuizLoop() {
 
 const argv = process.argv.slice(2);
 
-if (argv.length)
+if (argv.length) {
+  if (argv[0] === '-w')
+    return StartWebService(argv.slice(1));
+
   return Ask(null, argv.join(' '));
+}
 return QuizLoop();
