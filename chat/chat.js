@@ -132,8 +132,7 @@ function FormatGptResponse(gptResponse) {
 
 function SendChatReq(context, question, cb) {
 
-  cb = cb ? cb : function () {
-  };
+  cb = cb ? cb : function () { };
 
   question = (!question) ? '' : question.toString().trim();
   if (!question.length) {
@@ -219,6 +218,12 @@ function SendChatReq(context, question, cb) {
 
 
 function Ask(context, question, cb) {
+
+  context = BuildContext(context, ChatConfig.config.headers.Authorization);
+
+  if (question.indexOf('.') === 0)
+    return ChatCommand(context, question.slice(1).trim());
+
   if (!cb)   // no call back
     cb = function (err, result) {
       if (err)
@@ -250,6 +255,7 @@ function StartWebService(argv) {
       if (question.charAt(0) === '?' || question.charAt(0) === '&')
         question = question.slice(Math.max(1, question.indexOf('=') + 1));
 
+// a Get request never supplies context
       Ask(null, question, function (err, result) {
         res.send(result.response.text);
       });
@@ -339,19 +345,38 @@ function FindMisses(obj, indent) {
         sb.append(FindMisses(hit.val, indent + '  '));
     }
   } else {
-    const keys = Object.keys(obj);
-    for (let i = 0, ilen = keys.length; i < ilen; ++i) {
-      sb.append(`\n${indent}${keys[i]}`);
-      if (i === 0)
-        first = keys[i];
-      if (nx.isObject(obj[keys[i]]))
-        sb.append(FindMisses(obj[keys[i]], indent + '  '));
+    if (nx.isObject(obj)) {
+      const keys = Object.keys(obj);
+      for (let i = 0, ilen = keys.length; i < ilen; ++i) {
+        const key = keys[i];
+        const it = obj[key];
+        sb.append(`\n${indent}${key}`);
+        if (i === 0)
+          first = key;
+        if (nx.isObject(it) || nx.isArray(it) || nx.isFunction(it))
+          sb.append(FindMisses(it, indent + '  '));
+      }
+    } else if (nx.isArray(obj)) {
+      for (let i = 0, ilen = obj.length; i < ilen; ++i) {
+        const it = obj[i];
+        sb.append(`\n${indent}${it}`);
+        if (i === 0)
+          first = it;
+        if (nx.isObject(it) || nx.isArray(it) || nx.isFunction(it))
+          sb.append(FindMisses(it, indent + '  '));
+      }
+    } else if (nx.isFunction(obj)) {
+        sb.append(`\n${indent}${obj.name}`);
+        if (!first)
+          first = obj.name;
     }
   }
 
   if (sb._array.length !== 1)
     return sb.toString();
-  return `${first.toString()} `;
+  if (first)
+    return `${first.toString()} `;
+  return ' ';
 }
 
 
@@ -499,9 +524,6 @@ function QuizLoop() {
 
     if (question.length <= 0)
       ChatExit(context, 0);
-
-    if (question.indexOf('.') === 0)
-      return ChatCommand(context, question.slice(1).trim());
 
     Ask(context, question);
   });
